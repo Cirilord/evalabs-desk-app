@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "skills": {
+    "committing-with-commitlint": {
+      "source": "conventional-changelog/commitlint",
+      "ref": "master",
+      "sourceType": "github",
+      "skillPath": "skills/committing-with-commitlint/SKILL.md",
+      "computedHash": "4eee04ecb51c36b1b3efbca739d5651f4b4483a847fdbd8f96cda4e3037b9e9f"
+    }
+  }
+}
