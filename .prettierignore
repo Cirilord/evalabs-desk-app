@@ -1,2 +1,3 @@
 .agents/
+src-tauri/gen
 src-tauri/target

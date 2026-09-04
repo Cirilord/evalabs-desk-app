@@ -1,4 +1,5 @@
-import { PlusIcon, SettingsIcon, SparklesIcon } from 'lucide-react';
+import { CircleIcon, PlusIcon, SettingsIcon, SparklesIcon } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 import {
   Sidebar,
@@ -12,18 +13,28 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSkeleton,
   SidebarRail,
 } from '@/components/ui/sidebar';
+import type { $AutomationPayload } from '@/data/sqlite/types';
 
-export function AppSidebar() {
+type AppSidebarProps = {
+  automations: $AutomationPayload[];
+  isLoading: boolean;
+  loadError: string | null;
+};
+
+export function AppSidebar({ automations, isLoading, loadError }: AppSidebarProps) {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="h-12 justify-center border-b border-sidebar-border px-2 py-0">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" tooltip="Eva">
-              <SparklesIcon />
-              <span className="font-semibold">Eva</span>
+            <SidebarMenuButton size="lg" tooltip="Eva" asChild>
+              <Link to="/">
+                <SparklesIcon />
+                <span className="font-semibold">Eva</span>
+              </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
@@ -32,13 +43,38 @@ export function AppSidebar() {
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel>Automations</SidebarGroupLabel>
-          <SidebarGroupAction aria-label="Create automation">
-            <PlusIcon />
+          <SidebarGroupAction aria-label="Create automation" asChild>
+            <Link to="/automations/new">
+              <PlusIcon />
+            </Link>
           </SidebarGroupAction>
           <SidebarGroupContent>
-            <p className="px-2 py-4 text-sm text-sidebar-foreground/60 group-data-[collapsible=icon]:hidden">
-              No automations yet.
-            </p>
+            {isLoading ? (
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuSkeleton showIcon />
+                </SidebarMenuItem>
+              </SidebarMenu>
+            ) : loadError ? (
+              <p className="px-2 py-4 text-sm text-destructive group-data-[collapsible=icon]:hidden">
+                Could not load automations.
+              </p>
+            ) : automations.length === 0 ? (
+              <p className="px-2 py-4 text-sm text-sidebar-foreground/60 group-data-[collapsible=icon]:hidden">
+                No automations yet.
+              </p>
+            ) : (
+              <SidebarMenu>
+                {automations.map((automation) => (
+                  <SidebarMenuItem key={automation.id}>
+                    <SidebarMenuButton tooltip={automation.name}>
+                      <CircleIcon />
+                      <span>{automation.name}</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            )}
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
@@ -46,9 +82,11 @@ export function AppSidebar() {
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton tooltip="Create automation">
-              <PlusIcon />
-              <span>Create automation</span>
+            <SidebarMenuButton tooltip="Create automation" asChild>
+              <Link to="/automations/new">
+                <PlusIcon />
+                <span>Create automation</span>
+              </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
