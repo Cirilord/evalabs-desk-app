@@ -5,7 +5,10 @@ import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended'
 import reactHooks from 'eslint-plugin-react-hooks';
 import reactRefresh from 'eslint-plugin-react-refresh';
 import globals from 'globals';
+import { fileURLToPath } from 'node:url';
 import tseslint from 'typescript-eslint';
+
+const tsconfigPath = fileURLToPath(new URL('./tsconfig.json', import.meta.url));
 
 export default tseslint.config(
   {
@@ -32,7 +35,7 @@ export default tseslint.config(
     settings: {
       'import/resolver': {
         typescript: {
-          project: './tsconfig.json',
+          project: tsconfigPath,
         },
       },
     },
