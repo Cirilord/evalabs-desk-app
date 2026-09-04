@@ -47,6 +47,10 @@ export type AutomationFindUniqueArgs = {
 
 export type AutomationFindUniqueOrThrowArgs = AutomationFindUniqueArgs;
 
+export type AutomationDeleteArgs = {
+  where: AutomationWhereInput;
+};
+
 export type AutomationWhereInput = {
   id: string;
 };

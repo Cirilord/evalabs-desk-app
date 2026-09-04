@@ -4,6 +4,7 @@ import type {
   $AutomationPayload,
   AutomationCreateArgs,
   AutomationDatabaseRecord,
+  AutomationDeleteArgs,
   AutomationFindUniqueArgs,
   AutomationFindUniqueOrThrowArgs,
   AutomationInput,
@@ -109,6 +110,12 @@ class SQLiteClient {
         );
 
         return this.automation.findUniqueOrThrow({ where: { id } });
+      },
+
+      delete: async (args: AutomationDeleteArgs) => {
+        const database = await this.db;
+
+        await database.execute('DELETE FROM automations WHERE id = $1', [args.where.id]);
       },
 
       findMany: async () => {
