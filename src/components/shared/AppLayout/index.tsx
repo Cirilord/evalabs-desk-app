@@ -26,11 +26,13 @@ export function AppLayout(props: AppLayoutProps) {
         isLoading={isLoading}
         loadError={error ? (error instanceof Error ? error.message : String(error)) : null}
       />
-      <SidebarInset className="bg-[#f6f6f6]">
+      <SidebarInset className="h-svh overflow-hidden bg-[#f6f6f6]">
         <header className="flex h-12 shrink-0 items-center border-b px-3">
           <SidebarTrigger />
         </header>
-        <Outlet />
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <Outlet />
+        </div>
       </SidebarInset>
     </SidebarProvider>
   );

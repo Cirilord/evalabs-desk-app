@@ -3,8 +3,11 @@ import Database from '@tauri-apps/plugin-sql';
 import type {
   $AutomationPayload,
   AutomationCreateArgs,
+  AutomationDatabaseRecord,
   AutomationFindUniqueArgs,
   AutomationFindUniqueOrThrowArgs,
+  AutomationInput,
+  AutomationOutput,
 } from '@/data/sqlite/types';
 
 const DATABASE_URL = 'sqlite:eva.db';
@@ -13,9 +16,44 @@ const automationColumns = `
   id,
   name,
   description,
+  script,
+  inputs_json AS inputsJson,
+  outputs_json AS outputsJson,
   created_at AS createdAt,
   updated_at AS updatedAt
 `;
+
+function parseAutomationInputs(inputsJson: string): AutomationInput[] {
+  try {
+    const inputs: unknown = JSON.parse(inputsJson);
+
+    return Array.isArray(inputs) ? (inputs as AutomationInput[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function parseAutomationOutputs(outputsJson: string): AutomationOutput[] {
+  try {
+    const outputs: unknown = JSON.parse(outputsJson);
+
+    return Array.isArray(outputs) ? (outputs as AutomationOutput[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+function mapAutomation({
+  inputsJson,
+  outputsJson,
+  ...automation
+}: AutomationDatabaseRecord): $AutomationPayload {
+  return {
+    ...automation,
+    inputs: parseAutomationInputs(inputsJson),
+    outputs: parseAutomationOutputs(outputsJson),
+  };
+}
 
 class SQLiteClient {
   private db: Promise<Database>;
@@ -39,16 +77,35 @@ class SQLiteClient {
 
         await database.execute(
           `
-            INSERT INTO automations (id, name, description, created_at, updated_at)
+            INSERT INTO automations (
+              id,
+              name,
+              description,
+              script,
+              inputs_json,
+              outputs_json,
+              created_at,
+              updated_at
+            )
             VALUES (
               $1,
               $2,
               $3,
+              $4,
+              $5,
+              $6,
               strftime('%Y-%m-%dT%H:%M:%fZ', 'now'),
               strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
             )
           `,
-          [id, name, data.description.trim()]
+          [
+            id,
+            name,
+            data.description.trim(),
+            data.script.trim(),
+            JSON.stringify(data.inputs),
+            JSON.stringify(data.outputs),
+          ]
         );
 
         return this.automation.findUniqueOrThrow({ where: { id } });
@@ -57,17 +114,19 @@ class SQLiteClient {
       findMany: async () => {
         const database = await this.db;
 
-        return database.select<$AutomationPayload[]>(`
+        const automations = await database.select<AutomationDatabaseRecord[]>(`
           SELECT ${automationColumns}
           FROM automations
           ORDER BY updated_at DESC, name COLLATE NOCASE ASC
         `);
+
+        return automations.map(mapAutomation);
       },
 
       findUnique: async (args: AutomationFindUniqueArgs) => {
         const { where } = args;
         const database = await this.db;
-        const records = await database.select<$AutomationPayload[]>(
+        const records = await database.select<AutomationDatabaseRecord[]>(
           `
             SELECT ${automationColumns}
             FROM automations
@@ -76,7 +135,7 @@ class SQLiteClient {
           [where.id]
         );
 
-        return records[0] ?? null;
+        return records[0] ? mapAutomation(records[0]) : null;
       },
 
       findUniqueOrThrow: async (args: AutomationFindUniqueOrThrowArgs) => {
