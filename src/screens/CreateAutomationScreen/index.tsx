@@ -2,7 +2,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router-dom';
-import { z } from 'zod';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,18 +10,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { queryKeys } from '@/data/queryKeys';
 import sqlite from '@/data/sqlite';
 
-const createAutomationSchema = z.object({
-  name: z
-    .string()
-    .trim()
-    .min(1, 'Enter a name for the automation.')
-    .max(100, 'Name must contain at most 100 characters.'),
-  description: z.string().trim().max(500, 'Description must contain at most 500 characters.'),
-});
+import { createAutomationSchema } from './schema';
+import type { CreateAutomationForm, CreateAutomationScreenProps } from './types';
 
-type CreateAutomationForm = z.infer<typeof createAutomationSchema>;
-
-export function CreateAutomationScreen() {
+export function CreateAutomationScreen(props: CreateAutomationScreenProps) {
+  void props;
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const createAutomation = useMutation({

@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { HashRouter, Route, Routes } from 'react-router-dom';
 
-import { AppLayout } from '@/components/AppLayout';
+import { AppLayout } from '@/components/shared/AppLayout';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { CreateAutomationScreen } from '@/screens/CreateAutomationScreen';
 import { HomeScreen } from '@/screens/HomeScreen';

@@ -16,15 +16,11 @@ import {
   SidebarMenuSkeleton,
   SidebarRail,
 } from '@/components/ui/sidebar';
-import type { $AutomationPayload } from '@/data/sqlite/types';
 
-type AppSidebarProps = {
-  automations: $AutomationPayload[];
-  isLoading: boolean;
-  loadError: string | null;
-};
+import type { AppSidebarProps } from './types';
 
-export function AppSidebar({ automations, isLoading, loadError }: AppSidebarProps) {
+export function AppSidebar(props: AppSidebarProps) {
+  const { automations, isLoading, loadError } = props;
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="h-12 justify-center border-b border-sidebar-border px-2 py-0">

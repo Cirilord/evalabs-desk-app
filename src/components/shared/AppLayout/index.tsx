@@ -1,12 +1,15 @@
 import { useQuery } from '@tanstack/react-query';
 import { Outlet } from 'react-router-dom';
 
-import { AppSidebar } from '@/components/AppSidebar';
+import { AppSidebar } from '@/components/shared/AppSidebar';
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { queryKeys } from '@/data/queryKeys';
 import sqlite from '@/data/sqlite';
 
-export function AppLayout() {
+import { AppLayoutProps } from './types';
+
+export function AppLayout(props: AppLayoutProps) {
+  void props;
   const {
     data: automations = [],
     error,
