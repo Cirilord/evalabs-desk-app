@@ -63,9 +63,11 @@ export function AppSidebar(props: AppSidebarProps) {
               <SidebarMenu>
                 {automations.map((automation) => (
                   <SidebarMenuItem key={automation.id}>
-                    <SidebarMenuButton tooltip={automation.name}>
-                      <CircleIcon />
-                      <span>{automation.name}</span>
+                    <SidebarMenuButton tooltip={automation.name} asChild>
+                      <Link to={`/automations/${automation.id}`}>
+                        <CircleIcon />
+                        <span>{automation.name}</span>
+                      </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 ))}

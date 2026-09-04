@@ -3,6 +3,7 @@ import { HashRouter, Route, Routes } from 'react-router-dom';
 
 import { AppLayout } from '@/components/shared/AppLayout';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { AutomationRunsScreen } from '@/screens/AutomationRunsScreen';
 import { CreateAutomationScreen } from '@/screens/CreateAutomationScreen';
 import { HomeScreen } from '@/screens/HomeScreen';
 
@@ -17,6 +18,7 @@ function App() {
             <Route element={<AppLayout />}>
               <Route path="/" element={<HomeScreen />} />
               <Route path="/automations/new" element={<CreateAutomationScreen />} />
+              <Route path="/automations/:automationId" element={<AutomationRunsScreen />} />
             </Route>
           </Routes>
         </HashRouter>
