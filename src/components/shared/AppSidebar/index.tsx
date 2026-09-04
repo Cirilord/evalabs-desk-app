@@ -1,6 +1,7 @@
 import { CircleIcon, PlusIcon, SettingsIcon, SparklesIcon } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
+import { SettingsModal } from '@/components/shared/SettingsModal';
 import {
   Sidebar,
   SidebarContent,
@@ -88,10 +89,14 @@ export function AppSidebar(props: AppSidebarProps) {
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <SidebarMenuButton tooltip="Settings">
-              <SettingsIcon />
-              <span>Settings</span>
-            </SidebarMenuButton>
+            <SettingsModal
+              trigger={
+                <SidebarMenuButton tooltip="Settings">
+                  <SettingsIcon />
+                  <span>Settings</span>
+                </SidebarMenuButton>
+              }
+            />
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
