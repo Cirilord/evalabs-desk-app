@@ -166,6 +166,15 @@ fn generate_run_id() -> Result<String, String> {
     Ok(format!("run-{}-{timestamp}-{sequence}", std::process::id()))
 }
 
+fn uses_interactive_input(script: &str) -> bool {
+    let script_without_whitespace: String = script
+        .chars()
+        .filter(|character| !character.is_whitespace())
+        .collect();
+
+    script_without_whitespace.contains("input(")
+}
+
 fn validate_outputs(
     outputs: &Value,
     configured_outputs: &[AutomationOutput],
@@ -261,6 +270,10 @@ async fn start_automation_run(
     outputs: Vec<AutomationOutput>,
     inputs: Value,
 ) -> Result<StartedRun, String> {
+    if uses_interactive_input(&script) {
+        return Err("input() is not supported. Define an automation input instead.".to_owned());
+    }
+
     let run_id = generate_run_id()?;
     let inputs_json = serde_json::to_string(&inputs).map_err(|error| error.to_string())?;
     let database = open_database(&app).await?;

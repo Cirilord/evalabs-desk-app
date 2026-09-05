@@ -411,7 +411,8 @@ export function CreateAutomationScreen(props: CreateAutomationScreenProps) {
             <Label>Script</Label>
             <p className="text-sm text-muted-foreground">
               Define <code>process(inputs)</code>. It receives a dictionary and must return a
-              dictionary with the configured outputs. Use <code>print</code> for logs.
+              dictionary with the configured outputs. Use <code>print</code> for logs;{' '}
+              <code>input()</code> is not supported.
             </p>
             <Controller
               control={control}

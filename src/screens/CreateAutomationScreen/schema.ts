@@ -25,7 +25,11 @@ export const createAutomationSchema = z.object({
     .string()
     .trim()
     .min(1, 'Enter the automation script.')
-    .regex(/\bdef\s+process\s*\(/, 'Define a process(inputs) function.'),
+    .regex(/\bdef\s+process\s*\(/, 'Define a process(inputs) function.')
+    .refine(
+      (script) => !/\binput\s*\(/.test(script),
+      'input() is not supported. Define an automation input instead.'
+    ),
   inputs: z.array(automationInputSchema),
   outputs: z.array(automationOutputSchema),
 });
