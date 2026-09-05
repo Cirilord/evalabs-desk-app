@@ -1,9 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { invoke } from '@tauri-apps/api/core';
-import { InfoIcon, PlayIcon, Trash2Icon } from 'lucide-react';
+import { InfoIcon, PencilIcon, PlayIcon, Trash2Icon } from 'lucide-react';
 import { AlertDialog } from 'radix-ui';
 import { useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
 import { queryKeys } from '@/data/queryKeys';
@@ -172,6 +172,12 @@ export function AutomationRunsScreen() {
             ) : null}
           </div>
           <div className="flex items-center gap-3">
+            <Button type="button" variant="outline" asChild>
+              <Link to={`/automations/${automation.id}/edit`}>
+                <PencilIcon data-icon="inline-start" />
+                Edit automation
+              </Link>
+            </Button>
             <Button type="button" onClick={() => setIsRunModalOpen(true)}>
               <PlayIcon data-icon="inline-start" />
               Run automation

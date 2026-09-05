@@ -51,6 +51,11 @@ export type AutomationDeleteArgs = {
   where: AutomationWhereInput;
 };
 
+export type AutomationUpdateArgs = {
+  where: AutomationWhereInput;
+  data: AutomationCreateInput;
+};
+
 export type AutomationWhereInput = {
   id: string;
 };

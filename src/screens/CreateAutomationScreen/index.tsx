@@ -17,11 +17,15 @@ import { createAutomationSchema } from './schema';
 import type { CreateAutomationForm, CreateAutomationScreenProps } from './types';
 
 export function CreateAutomationScreen(props: CreateAutomationScreenProps) {
-  void props;
+  const { automation } = props;
+  const isEditing = Boolean(automation);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const createAutomation = useMutation({
-    mutationFn: (data: CreateAutomationForm) => sqlite.automation.create({ data }),
+  const saveAutomation = useMutation({
+    mutationFn: (data: CreateAutomationForm) =>
+      automation
+        ? sqlite.automation.update({ where: { id: automation.id }, data })
+        : sqlite.automation.create({ data }),
   });
   const {
     formState: { errors, isSubmitting },
@@ -31,11 +35,11 @@ export function CreateAutomationScreen(props: CreateAutomationScreenProps) {
     setError,
   } = useForm<CreateAutomationForm>({
     defaultValues: {
-      name: '',
-      description: '',
-      script: '',
-      inputs: [],
-      outputs: [],
+      name: automation?.name ?? '',
+      description: automation?.description ?? '',
+      script: automation?.script ?? '',
+      inputs: automation?.inputs ?? [],
+      outputs: automation?.outputs ?? [],
     },
     resolver: zodResolver(createAutomationSchema),
   });
@@ -54,9 +58,10 @@ export function CreateAutomationScreen(props: CreateAutomationScreenProps) {
 
   async function onSubmit(data: CreateAutomationForm) {
     try {
-      await createAutomation.mutateAsync(data);
+      const savedAutomation = await saveAutomation.mutateAsync(data);
       await queryClient.invalidateQueries({ queryKey: queryKeys.automations });
-      await navigate('/');
+      await queryClient.invalidateQueries({ queryKey: queryKeys.automation(savedAutomation.id) });
+      await navigate(isEditing ? `/automations/${savedAutomation.id}` : '/');
     } catch (submitError) {
       setError('root', {
         message: submitError instanceof Error ? submitError.message : String(submitError),
@@ -68,9 +73,13 @@ export function CreateAutomationScreen(props: CreateAutomationScreenProps) {
     <main className="flex-1 p-6 sm:p-10">
       <div className="mx-auto w-full max-w-xl">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Create automation</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            {isEditing ? 'Edit automation' : 'Create automation'}
+          </h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Start with a name, a short description, and the script that runs the automation.
+            {isEditing
+              ? 'Update the script, inputs, and outputs of this automation.'
+              : 'Start with a name, a short description, and the script that runs the automation.'}
           </p>
         </div>
 
@@ -432,10 +441,16 @@ export function CreateAutomationScreen(props: CreateAutomationScreenProps) {
 
           <div className="flex justify-end gap-3">
             <Button variant="outline" asChild>
-              <Link to="/">Cancel</Link>
+              <Link to={automation ? `/automations/${automation.id}` : '/'}>Cancel</Link>
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? 'Creating…' : 'Create automation'}
+            <Button type="submit" disabled={isSubmitting || saveAutomation.isPending}>
+              {isSubmitting || saveAutomation.isPending
+                ? isEditing
+                  ? 'Saving...'
+                  : 'Creating...'
+                : isEditing
+                  ? 'Save changes'
+                  : 'Create automation'}
             </Button>
           </div>
         </form>

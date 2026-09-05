@@ -10,6 +10,7 @@ import type {
   AutomationFindUniqueOrThrowArgs,
   AutomationInput,
   AutomationOutput,
+  AutomationUpdateArgs,
   RunCompleteArgs,
   RunCreateArgs,
   RunDatabaseRecord,
@@ -195,6 +196,39 @@ class SQLiteClient {
         }
 
         return automation;
+      },
+
+      update: async (args: AutomationUpdateArgs) => {
+        const database = await this.db;
+        const name = args.data.name.trim();
+
+        if (!name) {
+          throw new Error('Automation name is required.');
+        }
+
+        await database.execute(
+          `
+            UPDATE automations
+            SET
+              name = $1,
+              description = $2,
+              script = $3,
+              inputs_json = $4,
+              outputs_json = $5,
+              updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+            WHERE id = $6
+          `,
+          [
+            name,
+            args.data.description.trim(),
+            args.data.script.trim(),
+            JSON.stringify(args.data.inputs),
+            JSON.stringify(args.data.outputs),
+            args.where.id,
+          ]
+        );
+
+        return this.automation.findUniqueOrThrow({ where: args.where });
       },
     };
   }
