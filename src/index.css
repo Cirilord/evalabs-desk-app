@@ -131,4 +131,8 @@
   html {
     @apply font-sans;
   }
+  a,
+  img {
+    -webkit-user-drag: none;
+  }
 }

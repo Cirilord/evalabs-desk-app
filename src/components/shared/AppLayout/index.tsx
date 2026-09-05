@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 
 import { AppSidebar } from '@/components/shared/AppSidebar';
@@ -10,6 +11,24 @@ import { AppLayoutProps } from './types';
 
 export function AppLayout(props: AppLayoutProps) {
   void props;
+  useEffect(() => {
+    function preventBrowserContextMenu(event: MouseEvent) {
+      event.preventDefault();
+    }
+
+    function preventBrowserDrag(event: DragEvent) {
+      event.preventDefault();
+    }
+
+    window.addEventListener('contextmenu', preventBrowserContextMenu, true);
+    window.addEventListener('dragstart', preventBrowserDrag, true);
+
+    return () => {
+      window.removeEventListener('contextmenu', preventBrowserContextMenu, true);
+      window.removeEventListener('dragstart', preventBrowserDrag, true);
+    };
+  }, []);
+
   const {
     data: automations = [],
     error,
