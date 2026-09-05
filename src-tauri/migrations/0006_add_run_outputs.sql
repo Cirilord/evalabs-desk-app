@@ -1,0 +1,3 @@
+ALTER TABLE runs RENAME COLUMN output TO logs;
+
+ALTER TABLE runs ADD COLUMN outputs_json TEXT NOT NULL DEFAULT '{}';

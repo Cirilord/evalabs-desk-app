@@ -34,7 +34,8 @@ const runColumns = `
   automation_id AS automationId,
   status,
   inputs_json AS inputsJson,
-  output,
+  outputs_json AS outputsJson,
+  logs,
   error,
   started_at AS startedAt,
   finished_at AS finishedAt
@@ -84,10 +85,15 @@ function parseRunInputs(inputsJson: string): Record<string, unknown> {
   }
 }
 
-function mapRun({ inputsJson, ...run }: RunDatabaseRecord): $RunPayload {
+function parseRunOutputs(outputsJson: string): Record<string, unknown> {
+  return parseRunInputs(outputsJson);
+}
+
+function mapRun({ inputsJson, outputsJson, ...run }: RunDatabaseRecord): $RunPayload {
   return {
     ...run,
     inputs: parseRunInputs(inputsJson),
+    outputs: parseRunOutputs(outputsJson),
   };
 }
 
@@ -203,12 +209,19 @@ class SQLiteClient {
             UPDATE runs
             SET
               status = $1,
-              output = $2,
-              error = $3,
+              outputs_json = $2,
+              logs = $3,
+              error = $4,
               finished_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
-            WHERE id = $4
+            WHERE id = $5
           `,
-          [args.data.status, args.data.output, args.data.error, args.where.id]
+          [
+            args.data.status,
+            JSON.stringify(args.data.outputs),
+            args.data.logs,
+            args.data.error,
+            args.where.id,
+          ]
         );
       },
 

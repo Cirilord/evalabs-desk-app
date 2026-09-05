@@ -15,7 +15,8 @@ import { RunDetailsModal } from './components/RunDetailsModal';
 
 type PythonExecution = {
   success: boolean;
-  output: string;
+  outputs: Record<string, unknown>;
+  logs: string;
   error: string;
 };
 
@@ -31,6 +32,36 @@ function normalizeInputs(automation: $AutomationPayload, values: Record<string, 
 
 function getRunStatusLabel(status: $RunPayload['status']) {
   return status.charAt(0).toUpperCase() + status.slice(1);
+}
+
+function validateOutputs(automation: $AutomationPayload, outputs: Record<string, unknown>) {
+  const configuredOutputNames = new Set(automation.outputs.map((output) => output.name));
+  const unexpectedOutput = Object.keys(outputs).find((name) => !configuredOutputNames.has(name));
+
+  if (unexpectedOutput) {
+    return `process returned an unexpected output: "${unexpectedOutput}".`;
+  }
+
+  for (const output of automation.outputs) {
+    const value = outputs[output.name];
+
+    if (value === undefined) {
+      return `process must return the "${output.name}" output.`;
+    }
+
+    const matchesType =
+      output.type === 'boolean'
+        ? typeof value === 'boolean'
+        : output.type === 'number'
+          ? typeof value === 'number' && Number.isFinite(value)
+          : typeof value === 'string';
+
+    if (!matchesType) {
+      return `The "${output.name}" output must be a ${output.type}.`;
+    }
+  }
+
+  return null;
 }
 
 export function AutomationRunsScreen() {
@@ -76,13 +107,17 @@ export function AutomationRunsScreen() {
           script: automation.script,
           inputs,
         });
+        const outputValidationError = execution.success
+          ? validateOutputs(automation, execution.outputs)
+          : null;
 
         await sqlite.run.complete({
           where: { id: run.id },
           data: {
-            status: execution.success ? 'succeeded' : 'failed',
-            output: execution.output,
-            error: execution.error,
+            status: execution.success && !outputValidationError ? 'succeeded' : 'failed',
+            outputs: execution.outputs,
+            logs: execution.logs,
+            error: outputValidationError ?? execution.error,
           },
         });
       } catch (error) {
@@ -90,7 +125,8 @@ export function AutomationRunsScreen() {
           where: { id: run.id },
           data: {
             status: 'failed',
-            output: '',
+            outputs: {},
+            logs: '',
             error: error instanceof Error ? error.message : String(error),
           },
         });

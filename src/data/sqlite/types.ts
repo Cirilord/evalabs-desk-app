@@ -62,14 +62,16 @@ export type $RunPayload = {
   automationId: string;
   status: RunStatus;
   inputs: Record<string, unknown>;
-  output: string;
+  outputs: Record<string, unknown>;
+  logs: string;
   error: string;
   startedAt: string;
   finishedAt: string | null;
 };
 
-export type RunDatabaseRecord = Omit<$RunPayload, 'inputs'> & {
+export type RunDatabaseRecord = Omit<$RunPayload, 'inputs' | 'outputs'> & {
   inputsJson: string;
+  outputsJson: string;
 };
 
 export type RunCreateArgs = {
@@ -85,7 +87,8 @@ export type RunCompleteArgs = {
   };
   data: {
     status: Exclude<RunStatus, 'running'>;
-    output: string;
+    outputs: Record<string, unknown>;
+    logs: string;
     error: string;
   };
 };

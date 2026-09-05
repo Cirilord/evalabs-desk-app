@@ -34,5 +34,11 @@ pub fn migrations() -> Vec<Migration> {
             sql: include_str!("../migrations/0005_create_runs.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 6,
+            description: "add_run_outputs",
+            sql: include_str!("../migrations/0006_add_run_outputs.sql"),
+            kind: MigrationKind::Up,
+        },
     ]
 }

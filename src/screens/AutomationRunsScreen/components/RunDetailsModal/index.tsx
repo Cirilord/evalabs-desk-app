@@ -55,9 +55,16 @@ export function RunDetailsModal({ onOpenChange, open, run }: RunDetailsModalProp
             </section>
 
             <section className="mt-6">
-              <h2 className="text-sm font-medium">Output</h2>
+              <h2 className="text-sm font-medium">Logs</h2>
               <pre className="mt-2 min-h-10 overflow-x-auto rounded-md bg-muted px-3 py-2 text-xs text-foreground">
-                {run.output || 'No output.'}
+                {run.logs || 'No logs.'}
+              </pre>
+            </section>
+
+            <section className="mt-6">
+              <h2 className="text-sm font-medium">Outputs</h2>
+              <pre className="mt-2 min-h-10 overflow-x-auto rounded-md bg-muted px-3 py-2 text-xs text-foreground">
+                {JSON.stringify(run.outputs, null, 2)}
               </pre>
             </section>
 

@@ -400,6 +400,10 @@ export function CreateAutomationScreen(props: CreateAutomationScreenProps) {
 
           <div className="space-y-2">
             <Label>Script</Label>
+            <p className="text-sm text-muted-foreground">
+              Define <code>process(inputs)</code>. It receives a dictionary and must return a
+              dictionary with the configured outputs. Use <code>print</code> for logs.
+            </p>
             <Controller
               control={control}
               name="script"
