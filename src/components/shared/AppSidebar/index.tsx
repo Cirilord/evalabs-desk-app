@@ -124,20 +124,20 @@ export function AppSidebar(props: AppSidebarProps) {
               <SidebarMenu>
                 {automations.map((automation) => (
                   <SidebarMenuItem key={automation.id}>
-                    <SidebarMenuButton tooltip={automation.name} asChild>
-                      <Link
-                        to={`/automations/${automation.id}`}
-                        onContextMenu={(event) => {
-                          event.preventDefault();
-                          void showAutomationMenu(automation, {
-                            x: event.clientX,
-                            y: event.clientY,
-                          });
-                        }}
-                      >
-                        <CircleIcon />
-                        <span>{automation.name}</span>
-                      </Link>
+                    <SidebarMenuButton
+                      className="select-none"
+                      tooltip={automation.name}
+                      onClick={() => navigate(`/automations/${automation.id}`)}
+                      onContextMenu={(event) => {
+                        event.preventDefault();
+                        void showAutomationMenu(automation, {
+                          x: event.clientX,
+                          y: event.clientY,
+                        });
+                      }}
+                    >
+                      <CircleIcon />
+                      <span>{automation.name}</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 ))}
@@ -152,7 +152,7 @@ export function AppSidebar(props: AppSidebarProps) {
           <SidebarMenuItem>
             <SettingsModal
               trigger={
-                <SidebarMenuButton tooltip="Settings">
+                <SidebarMenuButton className="select-none" tooltip="Settings">
                   <SettingsIcon />
                   <span>Settings</span>
                 </SidebarMenuButton>
