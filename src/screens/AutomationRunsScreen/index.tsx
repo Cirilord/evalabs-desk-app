@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { invoke } from '@tauri-apps/api/core';
-import { PlayIcon, Trash2Icon } from 'lucide-react';
+import { InfoIcon, PlayIcon, Trash2Icon } from 'lucide-react';
 import { AlertDialog } from 'radix-ui';
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -11,6 +11,7 @@ import sqlite from '@/data/sqlite';
 import type { $AutomationPayload, $RunPayload } from '@/data/sqlite/types';
 
 import { RunAutomationModal } from './components/RunAutomationModal';
+import { RunDetailsModal } from './components/RunDetailsModal';
 
 type PythonExecution = {
   success: boolean;
@@ -36,6 +37,7 @@ export function AutomationRunsScreen() {
   const { automationId } = useParams();
   const [isRunModalOpen, setIsRunModalOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [selectedRun, setSelectedRun] = useState<$RunPayload | null>(null);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { data: automation, isLoading } = useQuery({
@@ -175,22 +177,23 @@ export function AutomationRunsScreen() {
                         {new Date(run.startedAt).toLocaleString()}
                       </span>
                     </div>
-                    {run.finishedAt ? (
-                      <span className="text-sm text-muted-foreground">
-                        Finished {new Date(run.finishedAt).toLocaleTimeString()}
-                      </span>
-                    ) : null}
+                    <div className="flex items-center gap-3">
+                      {run.finishedAt ? (
+                        <span className="text-sm text-muted-foreground">
+                          Finished {new Date(run.finishedAt).toLocaleTimeString()}
+                        </span>
+                      ) : null}
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setSelectedRun(run)}
+                      >
+                        <InfoIcon data-icon="inline-start" />
+                        View details
+                      </Button>
+                    </div>
                   </div>
-                  {run.output ? (
-                    <pre className="mt-3 overflow-x-auto rounded-md bg-muted px-3 py-2 text-xs text-foreground">
-                      {run.output}
-                    </pre>
-                  ) : null}
-                  {run.error ? (
-                    <pre className="mt-3 overflow-x-auto rounded-md bg-destructive/10 px-3 py-2 text-xs text-destructive">
-                      {run.error}
-                    </pre>
-                  ) : null}
                 </article>
               ))}
             </div>
@@ -204,6 +207,17 @@ export function AutomationRunsScreen() {
         onOpenChange={setIsRunModalOpen}
         onRun={handleRun}
       />
+      {selectedRun ? (
+        <RunDetailsModal
+          open={Boolean(selectedRun)}
+          run={selectedRun}
+          onOpenChange={(open) => {
+            if (!open) {
+              setSelectedRun(null);
+            }
+          }}
+        />
+      ) : null}
       <AlertDialog.Root open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialog.Portal>
           <AlertDialog.Overlay className="fixed inset-0 z-50 bg-black/50" />
