@@ -1,5 +1,8 @@
+import { useQueryClient } from '@tanstack/react-query';
+import { LogicalPosition } from '@tauri-apps/api/dpi';
+import { Menu } from '@tauri-apps/api/menu';
 import { CircleIcon, PlusIcon, SettingsIcon, SparklesIcon } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 import { SettingsModal } from '@/components/shared/SettingsModal';
 import {
@@ -17,11 +20,68 @@ import {
   SidebarMenuSkeleton,
   SidebarRail,
 } from '@/components/ui/sidebar';
+import { queryKeys } from '@/data/queryKeys';
+import sqlite from '@/data/sqlite';
+import type { $AutomationPayload } from '@/data/sqlite/types';
 
 import type { AppSidebarProps } from './types';
 
 export function AppSidebar(props: AppSidebarProps) {
   const { automations, isLoading, loadError } = props;
+  const location = useLocation();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  async function cloneAutomation(automation: $AutomationPayload) {
+    const suffix = ' copy';
+    const name = `${automation.name.slice(0, 100 - suffix.length).trimEnd()}${suffix}`;
+    const clonedAutomation = await sqlite.automation.create({
+      data: {
+        name,
+        description: automation.description,
+        script: automation.script,
+        scriptSource: automation.scriptSource,
+        scriptPath: automation.scriptPath,
+        inputs: automation.inputs,
+        outputs: automation.outputs,
+      },
+    });
+
+    await queryClient.invalidateQueries({ queryKey: queryKeys.automations });
+    await navigate(`/automations/${clonedAutomation.id}`);
+  }
+
+  async function deleteAutomation(automation: $AutomationPayload) {
+    await sqlite.automation.delete({ where: { id: automation.id } });
+    await queryClient.invalidateQueries({ queryKey: queryKeys.automations });
+
+    if (location.pathname.startsWith(`/automations/${automation.id}`)) {
+      await navigate('/');
+    }
+  }
+
+  async function showAutomationMenu(
+    automation: $AutomationPayload,
+    position: { x: number; y: number }
+  ) {
+    const menu = await Menu.new({
+      items: [
+        {
+          action: () => void cloneAutomation(automation),
+          id: `clone-${automation.id}`,
+          text: 'Clone automation',
+        },
+        {
+          action: () => void deleteAutomation(automation),
+          id: `delete-${automation.id}`,
+          text: 'Delete automation',
+        },
+      ],
+    });
+
+    await menu.popup(new LogicalPosition(position.x, position.y));
+  }
+
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="h-12 justify-center border-b border-sidebar-border px-2 py-0">
@@ -65,7 +125,16 @@ export function AppSidebar(props: AppSidebarProps) {
                 {automations.map((automation) => (
                   <SidebarMenuItem key={automation.id}>
                     <SidebarMenuButton tooltip={automation.name} asChild>
-                      <Link to={`/automations/${automation.id}`}>
+                      <Link
+                        to={`/automations/${automation.id}`}
+                        onContextMenu={(event) => {
+                          event.preventDefault();
+                          void showAutomationMenu(automation, {
+                            x: event.clientX,
+                            y: event.clientY,
+                          });
+                        }}
+                      >
                         <CircleIcon />
                         <span>{automation.name}</span>
                       </Link>
