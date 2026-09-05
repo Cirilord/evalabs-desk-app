@@ -2,6 +2,7 @@ import Database from '@tauri-apps/plugin-sql';
 
 import type {
   $AutomationPayload,
+  $RunPayload,
   AutomationCreateArgs,
   AutomationDatabaseRecord,
   AutomationDeleteArgs,
@@ -9,6 +10,10 @@ import type {
   AutomationFindUniqueOrThrowArgs,
   AutomationInput,
   AutomationOutput,
+  RunCompleteArgs,
+  RunCreateArgs,
+  RunDatabaseRecord,
+  RunFindManyArgs,
 } from '@/data/sqlite/types';
 
 const DATABASE_URL = 'sqlite:eva.db';
@@ -22,6 +27,17 @@ const automationColumns = `
   outputs_json AS outputsJson,
   created_at AS createdAt,
   updated_at AS updatedAt
+`;
+
+const runColumns = `
+  id,
+  automation_id AS automationId,
+  status,
+  inputs_json AS inputsJson,
+  output,
+  error,
+  started_at AS startedAt,
+  finished_at AS finishedAt
 `;
 
 function parseAutomationInputs(inputsJson: string): AutomationInput[] {
@@ -53,6 +69,25 @@ function mapAutomation({
     ...automation,
     inputs: parseAutomationInputs(inputsJson),
     outputs: parseAutomationOutputs(outputsJson),
+  };
+}
+
+function parseRunInputs(inputsJson: string): Record<string, unknown> {
+  try {
+    const inputs: unknown = JSON.parse(inputsJson);
+
+    return inputs && typeof inputs === 'object' && !Array.isArray(inputs)
+      ? (inputs as Record<string, unknown>)
+      : {};
+  } catch {
+    return {};
+  }
+}
+
+function mapRun({ inputsJson, ...run }: RunDatabaseRecord): $RunPayload {
+  return {
+    ...run,
+    inputs: parseRunInputs(inputsJson),
   };
 }
 
@@ -115,6 +150,7 @@ class SQLiteClient {
       delete: async (args: AutomationDeleteArgs) => {
         const database = await this.db;
 
+        await database.execute('DELETE FROM runs WHERE automation_id = $1', [args.where.id]);
         await database.execute('DELETE FROM automations WHERE id = $1', [args.where.id]);
       },
 
@@ -153,6 +189,70 @@ class SQLiteClient {
         }
 
         return automation;
+      },
+    };
+  }
+
+  public get run() {
+    return {
+      complete: async (args: RunCompleteArgs) => {
+        const database = await this.db;
+
+        await database.execute(
+          `
+            UPDATE runs
+            SET
+              status = $1,
+              output = $2,
+              error = $3,
+              finished_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
+            WHERE id = $4
+          `,
+          [args.data.status, args.data.output, args.data.error, args.where.id]
+        );
+      },
+
+      create: async (args: RunCreateArgs) => {
+        const database = await this.db;
+        const id = crypto.randomUUID();
+
+        await database.execute(
+          `
+            INSERT INTO runs (id, automation_id, status, inputs_json, started_at)
+            VALUES ($1, $2, 'running', $3, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+          `,
+          [id, args.data.automationId, JSON.stringify(args.data.inputs)]
+        );
+
+        const runs = await database.select<RunDatabaseRecord[]>(
+          `
+            SELECT ${runColumns}
+            FROM runs
+            WHERE id = $1
+          `,
+          [id]
+        );
+
+        if (!runs[0]) {
+          throw new Error(`Run "${id}" was not created.`);
+        }
+
+        return mapRun(runs[0]);
+      },
+
+      findMany: async (args: RunFindManyArgs) => {
+        const database = await this.db;
+        const runs = await database.select<RunDatabaseRecord[]>(
+          `
+            SELECT ${runColumns}
+            FROM runs
+            WHERE automation_id = $1
+            ORDER BY started_at DESC
+          `,
+          [args.where.automationId]
+        );
+
+        return runs.map(mapRun);
       },
     };
   }

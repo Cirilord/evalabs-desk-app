@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { invoke } from '@tauri-apps/api/core';
 import { PlayIcon, Trash2Icon } from 'lucide-react';
 import { AlertDialog } from 'radix-ui';
 import { useState } from 'react';
@@ -7,8 +8,29 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { queryKeys } from '@/data/queryKeys';
 import sqlite from '@/data/sqlite';
+import type { $AutomationPayload, $RunPayload } from '@/data/sqlite/types';
 
 import { RunAutomationModal } from './components/RunAutomationModal';
+
+type PythonExecution = {
+  success: boolean;
+  output: string;
+  error: string;
+};
+
+function normalizeInputs(automation: $AutomationPayload, values: Record<string, unknown>) {
+  return Object.fromEntries(
+    automation.inputs.map((input) => {
+      const value = values[input.name];
+
+      return [input.name, input.type === 'number' && value !== '' ? Number(value) : value];
+    })
+  );
+}
+
+function getRunStatusLabel(status: $RunPayload['status']) {
+  return status.charAt(0).toUpperCase() + status.slice(1);
+}
 
 export function AutomationRunsScreen() {
   const { automationId } = useParams();
@@ -21,6 +43,11 @@ export function AutomationRunsScreen() {
     queryFn: () => sqlite.automation.findUnique({ where: { id: automationId ?? '' } }),
     enabled: Boolean(automationId),
   });
+  const { data: runs = [], isLoading: isLoadingRuns } = useQuery({
+    queryKey: queryKeys.runs(automationId ?? ''),
+    queryFn: () => sqlite.run.findMany({ where: { automationId: automationId ?? '' } }),
+    enabled: Boolean(automationId),
+  });
   const deleteAutomation = useMutation({
     mutationFn: () => sqlite.automation.delete({ where: { id: automationId ?? '' } }),
     onSuccess: async () => {
@@ -28,6 +55,61 @@ export function AutomationRunsScreen() {
       await navigate('/');
     },
   });
+  const runAutomation = useMutation({
+    mutationFn: async ({
+      automation,
+      inputs,
+    }: {
+      automation: $AutomationPayload;
+      inputs: Record<string, unknown>;
+    }) => {
+      const run = await sqlite.run.create({
+        data: { automationId: automation.id, inputs },
+      });
+
+      await queryClient.invalidateQueries({ queryKey: queryKeys.runs(automation.id) });
+
+      try {
+        const execution = await invoke<PythonExecution>('execute_python_script', {
+          script: automation.script,
+          inputs,
+        });
+
+        await sqlite.run.complete({
+          where: { id: run.id },
+          data: {
+            status: execution.success ? 'succeeded' : 'failed',
+            output: execution.output,
+            error: execution.error,
+          },
+        });
+      } catch (error) {
+        await sqlite.run.complete({
+          where: { id: run.id },
+          data: {
+            status: 'failed',
+            output: '',
+            error: error instanceof Error ? error.message : String(error),
+          },
+        });
+        throw error;
+      }
+    },
+    onSettled: async () => {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.runs(automationId ?? '') });
+    },
+  });
+
+  async function handleRun(values: Record<string, unknown>) {
+    if (!automation) {
+      throw new Error('Automation not found.');
+    }
+
+    await runAutomation.mutateAsync({
+      automation,
+      inputs: normalizeInputs(automation, values),
+    });
+  }
 
   if (isLoading) {
     return <main className="flex-1 p-6 sm:p-10">Loading automation...</main>;
@@ -73,18 +155,54 @@ export function AutomationRunsScreen() {
             </p>
           </div>
 
-          <div className="rounded-lg border bg-background px-5 py-10 text-center">
-            <p className="font-medium">No runs yet</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Run this automation to create its first execution.
-            </p>
-          </div>
+          {isLoadingRuns ? (
+            <p className="text-sm text-muted-foreground">Loading runs...</p>
+          ) : runs.length === 0 ? (
+            <div className="rounded-lg border bg-background px-5 py-10 text-center">
+              <p className="font-medium">No runs yet</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Run this automation to create its first execution.
+              </p>
+            </div>
+          ) : (
+            <div className="overflow-hidden rounded-lg border bg-background">
+              {runs.map((run) => (
+                <article key={run.id} className="border-b px-5 py-4 last:border-b-0">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm font-medium">{getRunStatusLabel(run.status)}</span>
+                      <span className="text-sm text-muted-foreground">
+                        {new Date(run.startedAt).toLocaleString()}
+                      </span>
+                    </div>
+                    {run.finishedAt ? (
+                      <span className="text-sm text-muted-foreground">
+                        Finished {new Date(run.finishedAt).toLocaleTimeString()}
+                      </span>
+                    ) : null}
+                  </div>
+                  {run.output ? (
+                    <pre className="mt-3 overflow-x-auto rounded-md bg-muted px-3 py-2 text-xs text-foreground">
+                      {run.output}
+                    </pre>
+                  ) : null}
+                  {run.error ? (
+                    <pre className="mt-3 overflow-x-auto rounded-md bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                      {run.error}
+                    </pre>
+                  ) : null}
+                </article>
+              ))}
+            </div>
+          )}
         </section>
       </div>
       <RunAutomationModal
         automation={automation}
+        isRunning={runAutomation.isPending}
         open={isRunModalOpen}
         onOpenChange={setIsRunModalOpen}
+        onRun={handleRun}
       />
       <AlertDialog.Root open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialog.Portal>

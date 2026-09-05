@@ -54,3 +54,44 @@ export type AutomationDeleteArgs = {
 export type AutomationWhereInput = {
   id: string;
 };
+
+export type RunStatus = 'running' | 'succeeded' | 'failed';
+
+export type $RunPayload = {
+  id: string;
+  automationId: string;
+  status: RunStatus;
+  inputs: Record<string, unknown>;
+  output: string;
+  error: string;
+  startedAt: string;
+  finishedAt: string | null;
+};
+
+export type RunDatabaseRecord = Omit<$RunPayload, 'inputs'> & {
+  inputsJson: string;
+};
+
+export type RunCreateArgs = {
+  data: {
+    automationId: string;
+    inputs: Record<string, unknown>;
+  };
+};
+
+export type RunCompleteArgs = {
+  where: {
+    id: string;
+  };
+  data: {
+    status: Exclude<RunStatus, 'running'>;
+    output: string;
+    error: string;
+  };
+};
+
+export type RunFindManyArgs = {
+  where: {
+    automationId: string;
+  };
+};
