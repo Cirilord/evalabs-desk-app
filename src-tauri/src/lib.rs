@@ -103,15 +103,26 @@ fn detect_python_interpreter() -> Result<Option<PythonInterpreter>, String> {
     }))
 }
 
-fn execute_python_script(script: String, inputs: Value) -> Result<PythonExecution, String> {
+fn execute_python_script(
+    inline_script: Option<String>,
+    script_path: Option<PathBuf>,
+    inputs: Value,
+) -> Result<PythonExecution, String> {
     let inputs = serde_json::to_string(&inputs).map_err(|error| error.to_string())?;
     let run_directory = TemporaryRunDirectory::create()?;
-    let automation_path = run_directory.path.join("automation.py");
     let runner_path = run_directory.path.join("main.py");
     let outputs_path = run_directory.path.join("outputs.json");
 
-    fs::write(&automation_path, script)
-        .map_err(|error| format!("Failed to write automation script: {error}"))?;
+    let automation_path = match inline_script {
+        Some(script) => {
+            let automation_path = run_directory.path.join("automation.py");
+            fs::write(&automation_path, script)
+                .map_err(|error| format!("Failed to write automation script: {error}"))?;
+            automation_path
+        }
+        None => script_path.ok_or_else(|| "A Python script path is required.".to_owned())?,
+    };
+
     fs::write(&runner_path, PYTHON_RUNNER)
         .map_err(|error| format!("Failed to prepare Python runner: {error}"))?;
 
@@ -119,6 +130,7 @@ fn execute_python_script(script: String, inputs: Value) -> Result<PythonExecutio
         .arg(&runner_path)
         .current_dir(&run_directory.path)
         .env("EVA_INPUTS", inputs)
+        .env("EVA_AUTOMATION_PATH", automation_path)
         .env("EVA_OUTPUTS_PATH", &outputs_path)
         .output()
         .map_err(|error| format!("Failed to start Python: {error}"))?;
@@ -267,10 +279,26 @@ async fn start_automation_run(
     app: AppHandle,
     automation_id: String,
     script: String,
+    script_source: String,
+    script_path: Option<String>,
     outputs: Vec<AutomationOutput>,
     inputs: Value,
 ) -> Result<StartedRun, String> {
-    if uses_interactive_input(&script) {
+    let (inline_script, script_path, script_contents) = match script_source.as_str() {
+        "inline" => (Some(script.clone()), None, script),
+        "file" => {
+            let path = script_path.ok_or_else(|| "A Python script path is required.".to_owned())?;
+            let path = fs::canonicalize(path)
+                .map_err(|error| format!("Failed to access Python script: {error}"))?;
+            let contents = fs::read_to_string(&path)
+                .map_err(|error| format!("Failed to read Python script: {error}"))?;
+
+            (None, Some(path), contents)
+        }
+        _ => return Err("Unsupported script source.".to_owned()),
+    };
+
+    if uses_interactive_input(&script_contents) {
         return Err("input() is not supported. Define an automation input instead.".to_owned());
     }
 
@@ -297,7 +325,7 @@ async fn start_automation_run(
 
     tauri::async_runtime::spawn(async move {
         let execution = match tauri::async_runtime::spawn_blocking(move || {
-            execute_python_script(script, inputs)
+            execute_python_script(inline_script, script_path, inputs)
         })
         .await
         {

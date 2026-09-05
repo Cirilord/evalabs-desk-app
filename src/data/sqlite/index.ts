@@ -22,6 +22,8 @@ const automationColumns = `
   name,
   description,
   script,
+  script_source AS scriptSource,
+  script_path AS scriptPath,
   inputs_json AS inputsJson,
   outputs_json AS outputsJson,
   created_at AS createdAt,
@@ -123,6 +125,8 @@ class SQLiteClient {
               name,
               description,
               script,
+              script_source,
+              script_path,
               inputs_json,
               outputs_json,
               created_at,
@@ -135,6 +139,8 @@ class SQLiteClient {
               $4,
               $5,
               $6,
+              $7,
+              $8,
               strftime('%Y-%m-%dT%H:%M:%fZ', 'now'),
               strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
             )
@@ -144,6 +150,8 @@ class SQLiteClient {
             name,
             data.description.trim(),
             data.script.trim(),
+            data.scriptSource,
+            data.scriptPath,
             JSON.stringify(data.inputs),
             JSON.stringify(data.outputs),
           ]
@@ -211,15 +219,19 @@ class SQLiteClient {
               name = $1,
               description = $2,
               script = $3,
-              inputs_json = $4,
-              outputs_json = $5,
+              script_source = $4,
+              script_path = $5,
+              inputs_json = $6,
+              outputs_json = $7,
               updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
-            WHERE id = $6
+            WHERE id = $8
           `,
           [
             name,
             args.data.description.trim(),
             args.data.script.trim(),
+            args.data.scriptSource,
+            args.data.scriptPath,
             JSON.stringify(args.data.inputs),
             JSON.stringify(args.data.outputs),
             args.where.id,

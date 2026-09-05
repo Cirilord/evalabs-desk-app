@@ -3,6 +3,8 @@ export type $AutomationPayload = {
   name: string;
   description: string;
   script: string;
+  scriptSource: AutomationScriptSource;
+  scriptPath: string | null;
   inputs: AutomationInput[];
   outputs: AutomationOutput[];
   createdAt: string;
@@ -23,6 +25,8 @@ export type AutomationInput = {
 
 export type AutomationInputType = 'text' | 'file' | 'number' | 'boolean';
 
+export type AutomationScriptSource = 'inline' | 'file';
+
 export type AutomationOutput = {
   name: string;
   type: AutomationInputType;
@@ -37,6 +41,8 @@ export type AutomationCreateInput = {
   name: string;
   description: string;
   script: string;
+  scriptSource: AutomationScriptSource;
+  scriptPath: string | null;
   inputs: AutomationInput[];
   outputs: AutomationOutput[];
 };

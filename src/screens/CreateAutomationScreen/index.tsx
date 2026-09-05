@@ -1,8 +1,9 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { CheckIcon, ChevronDownIcon, PlusIcon, Trash2Icon } from 'lucide-react';
+import { open as openFileDialog } from '@tauri-apps/plugin-dialog';
+import { CheckIcon, ChevronDownIcon, FileIcon, PlusIcon, Trash2Icon } from 'lucide-react';
 import { Checkbox, Select } from 'radix-ui';
-import { Controller, useFieldArray, useForm } from 'react-hook-form';
+import { Controller, useFieldArray, useForm, useWatch } from 'react-hook-form';
 import { Link, useNavigate } from 'react-router-dom';
 
 import { CodeEditor } from '@/components/shared/CodeEditor';
@@ -38,6 +39,8 @@ export function CreateAutomationScreen(props: CreateAutomationScreenProps) {
       name: automation?.name ?? '',
       description: automation?.description ?? '',
       script: automation?.script ?? '',
+      scriptSource: automation?.scriptSource ?? 'inline',
+      scriptPath: automation?.scriptPath ?? null,
       inputs: automation?.inputs ?? [],
       outputs: automation?.outputs ?? [],
     },
@@ -55,6 +58,7 @@ export function CreateAutomationScreen(props: CreateAutomationScreenProps) {
     control,
     name: 'outputs',
   });
+  const scriptSource = useWatch({ control, name: 'scriptSource' });
 
   async function onSubmit(data: CreateAutomationForm) {
     try {
@@ -408,31 +412,115 @@ export function CreateAutomationScreen(props: CreateAutomationScreenProps) {
           </section>
 
           <div className="space-y-2">
-            <Label>Script</Label>
-            <p className="text-sm text-muted-foreground">
-              Define <code>process(inputs)</code>. It receives a dictionary and must return a
-              dictionary with the configured outputs. Use <code>print</code> for logs;{' '}
-              <code>input()</code> is not supported.
-            </p>
+            <Label>Script source</Label>
             <Controller
               control={control}
-              name="script"
+              name="scriptSource"
               render={({ field }) => (
-                <CodeEditor
-                  describedBy="script-error"
-                  invalid={Boolean(errors.script)}
-                  onBlur={field.onBlur}
-                  onChange={field.onChange}
-                  value={field.value}
-                />
+                <Select.Root value={field.value} onValueChange={field.onChange}>
+                  <Select.Trigger
+                    className="flex h-9 w-full items-center justify-between rounded-md border bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                    aria-label="Script source"
+                  >
+                    <Select.Value />
+                    <Select.Icon asChild>
+                      <ChevronDownIcon />
+                    </Select.Icon>
+                  </Select.Trigger>
+                  <Select.Portal>
+                    <Select.Content
+                      className="overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md"
+                      position="popper"
+                    >
+                      <Select.Viewport className="p-1">
+                        <Select.Group>
+                          <Select.Item
+                            className="cursor-default rounded-sm px-2 py-1.5 text-sm outline-none data-highlighted:bg-accent"
+                            value="inline"
+                          >
+                            <Select.ItemText>Write script</Select.ItemText>
+                          </Select.Item>
+                          <Select.Item
+                            className="cursor-default rounded-sm px-2 py-1.5 text-sm outline-none data-highlighted:bg-accent"
+                            value="file"
+                          >
+                            <Select.ItemText>Choose Python file</Select.ItemText>
+                          </Select.Item>
+                        </Select.Group>
+                      </Select.Viewport>
+                    </Select.Content>
+                  </Select.Portal>
+                </Select.Root>
               )}
             />
-            {errors.script ? (
-              <p id="script-error" className="text-sm text-destructive">
-                {errors.script.message}
-              </p>
-            ) : null}
           </div>
+
+          {scriptSource === 'inline' ? (
+            <div className="space-y-2">
+              <Label>Script</Label>
+              <p className="text-sm text-muted-foreground">
+                Define <code>process(inputs)</code>. It receives a dictionary and must return a
+                dictionary with the configured outputs. Use <code>print</code> for logs;{' '}
+                <code>input()</code> is not supported.
+              </p>
+              <Controller
+                control={control}
+                name="script"
+                render={({ field }) => (
+                  <CodeEditor
+                    describedBy="script-error"
+                    invalid={Boolean(errors.script)}
+                    onBlur={field.onBlur}
+                    onChange={field.onChange}
+                    value={field.value}
+                  />
+                )}
+              />
+              {errors.script ? (
+                <p id="script-error" className="text-sm text-destructive">
+                  {errors.script.message}
+                </p>
+              ) : null}
+            </div>
+          ) : (
+            <Controller
+              control={control}
+              name="scriptPath"
+              render={({ field }) => (
+                <div className="space-y-2">
+                  <Label htmlFor="script-path">Python file</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="script-path"
+                      readOnly
+                      value={field.value ?? ''}
+                      placeholder="No Python file selected"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={async () => {
+                        const path = await openFileDialog({
+                          filters: [{ extensions: ['py'], name: 'Python files' }],
+                          multiple: false,
+                        });
+                        field.onChange(Array.isArray(path) ? path[0] : (path ?? null));
+                      }}
+                    >
+                      <FileIcon data-icon="inline-start" />
+                      Choose file
+                    </Button>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    The current version of this file is used every time the automation runs.
+                  </p>
+                  {errors.scriptPath ? (
+                    <p className="text-sm text-destructive">{errors.scriptPath.message}</p>
+                  ) : null}
+                </div>
+              )}
+            />
+          )}
 
           {errors.root ? (
             <p className="text-sm text-destructive" role="alert">

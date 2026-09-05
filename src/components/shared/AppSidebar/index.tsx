@@ -81,14 +81,6 @@ export function AppSidebar(props: AppSidebarProps) {
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton tooltip="Create automation" asChild>
-              <Link to="/automations/new">
-                <PlusIcon />
-                <span>Create automation</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
             <SettingsModal
               trigger={
                 <SidebarMenuButton tooltip="Settings">

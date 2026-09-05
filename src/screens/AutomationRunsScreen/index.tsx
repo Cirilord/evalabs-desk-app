@@ -77,6 +77,8 @@ export function AutomationRunsScreen() {
       await invoke('start_automation_run', {
         automationId: automation.id,
         script: automation.script,
+        scriptSource: automation.scriptSource,
+        scriptPath: automation.scriptPath,
         outputs: automation.outputs,
         inputs,
       });
