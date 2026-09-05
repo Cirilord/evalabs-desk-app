@@ -11,8 +11,6 @@ import type {
   AutomationInput,
   AutomationOutput,
   AutomationUpdateArgs,
-  RunCompleteArgs,
-  RunCreateArgs,
   RunDatabaseRecord,
   RunFindManyArgs,
 } from '@/data/sqlite/types';
@@ -235,58 +233,6 @@ class SQLiteClient {
 
   public get run() {
     return {
-      complete: async (args: RunCompleteArgs) => {
-        const database = await this.db;
-
-        await database.execute(
-          `
-            UPDATE runs
-            SET
-              status = $1,
-              outputs_json = $2,
-              logs = $3,
-              error = $4,
-              finished_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
-            WHERE id = $5
-          `,
-          [
-            args.data.status,
-            JSON.stringify(args.data.outputs),
-            args.data.logs,
-            args.data.error,
-            args.where.id,
-          ]
-        );
-      },
-
-      create: async (args: RunCreateArgs) => {
-        const database = await this.db;
-        const id = crypto.randomUUID();
-
-        await database.execute(
-          `
-            INSERT INTO runs (id, automation_id, status, inputs_json, started_at)
-            VALUES ($1, $2, 'running', $3, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
-          `,
-          [id, args.data.automationId, JSON.stringify(args.data.inputs)]
-        );
-
-        const runs = await database.select<RunDatabaseRecord[]>(
-          `
-            SELECT ${runColumns}
-            FROM runs
-            WHERE id = $1
-          `,
-          [id]
-        );
-
-        if (!runs[0]) {
-          throw new Error(`Run "${id}" was not created.`);
-        }
-
-        return mapRun(runs[0]);
-      },
-
       findMany: async (args: RunFindManyArgs) => {
         const database = await this.db;
         const runs = await database.select<RunDatabaseRecord[]>(

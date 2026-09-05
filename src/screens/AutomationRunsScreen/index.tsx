@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { invoke } from '@tauri-apps/api/core';
-import { InfoIcon, PencilIcon, PlayIcon, Trash2Icon } from 'lucide-react';
+import { listen } from '@tauri-apps/api/event';
+import { InfoIcon, LoaderCircleIcon, PencilIcon, PlayIcon, Trash2Icon } from 'lucide-react';
 import { AlertDialog } from 'radix-ui';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
@@ -12,13 +13,6 @@ import type { $AutomationPayload, $RunPayload } from '@/data/sqlite/types';
 
 import { RunAutomationModal } from './components/RunAutomationModal';
 import { RunDetailsModal } from './components/RunDetailsModal';
-
-type PythonExecution = {
-  success: boolean;
-  outputs: Record<string, unknown>;
-  logs: string;
-  error: string;
-};
 
 function normalizeInputs(automation: $AutomationPayload, values: Record<string, unknown>) {
   return Object.fromEntries(
@@ -34,36 +28,6 @@ function getRunStatusLabel(status: $RunPayload['status']) {
   return status.charAt(0).toUpperCase() + status.slice(1);
 }
 
-function validateOutputs(automation: $AutomationPayload, outputs: Record<string, unknown>) {
-  const configuredOutputNames = new Set(automation.outputs.map((output) => output.name));
-  const unexpectedOutput = Object.keys(outputs).find((name) => !configuredOutputNames.has(name));
-
-  if (unexpectedOutput) {
-    return `process returned an unexpected output: "${unexpectedOutput}".`;
-  }
-
-  for (const output of automation.outputs) {
-    const value = outputs[output.name];
-
-    if (value === undefined) {
-      return `process must return the "${output.name}" output.`;
-    }
-
-    const matchesType =
-      output.type === 'boolean'
-        ? typeof value === 'boolean'
-        : output.type === 'number'
-          ? typeof value === 'number' && Number.isFinite(value)
-          : typeof value === 'string';
-
-    if (!matchesType) {
-      return `The "${output.name}" output must be a ${output.type}.`;
-    }
-  }
-
-  return null;
-}
-
 export function AutomationRunsScreen() {
   const { automationId } = useParams();
   const [isRunModalOpen, setIsRunModalOpen] = useState(false);
@@ -71,6 +35,20 @@ export function AutomationRunsScreen() {
   const [selectedRun, setSelectedRun] = useState<$RunPayload | null>(null);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+
+    void listen<{ automationId: string }>('run:updated', ({ payload }) => {
+      if (payload.automationId === automationId) {
+        void queryClient.invalidateQueries({ queryKey: queryKeys.runs(automationId ?? '') });
+      }
+    }).then((dispose) => {
+      unlisten = dispose;
+    });
+
+    return () => unlisten?.();
+  }, [automationId, queryClient]);
   const { data: automation, isLoading } = useQuery({
     queryKey: queryKeys.automation(automationId ?? ''),
     queryFn: () => sqlite.automation.findUnique({ where: { id: automationId ?? '' } }),
@@ -96,44 +74,14 @@ export function AutomationRunsScreen() {
       automation: $AutomationPayload;
       inputs: Record<string, unknown>;
     }) => {
-      const run = await sqlite.run.create({
-        data: { automationId: automation.id, inputs },
+      await invoke('start_automation_run', {
+        automationId: automation.id,
+        script: automation.script,
+        outputs: automation.outputs,
+        inputs,
       });
-
-      await queryClient.invalidateQueries({ queryKey: queryKeys.runs(automation.id) });
-
-      try {
-        const execution = await invoke<PythonExecution>('execute_python_script', {
-          script: automation.script,
-          inputs,
-        });
-        const outputValidationError = execution.success
-          ? validateOutputs(automation, execution.outputs)
-          : null;
-
-        await sqlite.run.complete({
-          where: { id: run.id },
-          data: {
-            status: execution.success && !outputValidationError ? 'succeeded' : 'failed',
-            outputs: execution.outputs,
-            logs: execution.logs,
-            error: outputValidationError ?? execution.error,
-          },
-        });
-      } catch (error) {
-        await sqlite.run.complete({
-          where: { id: run.id },
-          data: {
-            status: 'failed',
-            outputs: {},
-            logs: '',
-            error: error instanceof Error ? error.message : String(error),
-          },
-        });
-        throw error;
-      }
     },
-    onSettled: async () => {
+    onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.runs(automationId ?? '') });
     },
   });
@@ -224,6 +172,9 @@ export function AutomationRunsScreen() {
                         <span className="text-sm text-muted-foreground">
                           Finished {new Date(run.finishedAt).toLocaleTimeString()}
                         </span>
+                      ) : null}
+                      {run.status === 'running' ? (
+                        <LoaderCircleIcon className="animate-spin text-muted-foreground" />
                       ) : null}
                       <Button
                         type="button"

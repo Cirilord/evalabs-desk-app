@@ -79,25 +79,6 @@ export type RunDatabaseRecord = Omit<$RunPayload, 'inputs' | 'outputs'> & {
   outputsJson: string;
 };
 
-export type RunCreateArgs = {
-  data: {
-    automationId: string;
-    inputs: Record<string, unknown>;
-  };
-};
-
-export type RunCompleteArgs = {
-  where: {
-    id: string;
-  };
-  data: {
-    status: Exclude<RunStatus, 'running'>;
-    outputs: Record<string, unknown>;
-    logs: string;
-    error: string;
-  };
-};
-
 export type RunFindManyArgs = {
   where: {
     automationId: string;
