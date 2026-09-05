@@ -1,7 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
-import { InfoIcon, LoaderCircleIcon, PencilIcon, PlayIcon, Trash2Icon } from 'lucide-react';
+import {
+  CopyIcon,
+  InfoIcon,
+  LoaderCircleIcon,
+  PencilIcon,
+  PlayIcon,
+  Trash2Icon,
+} from 'lucide-react';
 import { AlertDialog } from 'radix-ui';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
@@ -26,6 +33,12 @@ function normalizeInputs(automation: $AutomationPayload, values: Record<string, 
 
 function getRunStatusLabel(status: $RunPayload['status']) {
   return status.charAt(0).toUpperCase() + status.slice(1);
+}
+
+function getCloneName(name: string) {
+  const suffix = ' copy';
+
+  return `${name.slice(0, 100 - suffix.length).trimEnd()}${suffix}`;
 }
 
 export function AutomationRunsScreen() {
@@ -64,6 +77,24 @@ export function AutomationRunsScreen() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.automations });
       await navigate('/');
+    },
+  });
+  const cloneAutomation = useMutation({
+    mutationFn: (automation: $AutomationPayload) =>
+      sqlite.automation.create({
+        data: {
+          name: getCloneName(automation.name),
+          description: automation.description,
+          script: automation.script,
+          scriptSource: automation.scriptSource,
+          scriptPath: automation.scriptPath,
+          inputs: automation.inputs,
+          outputs: automation.outputs,
+        },
+      }),
+    onSuccess: async (clonedAutomation) => {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.automations });
+      await navigate(`/automations/${clonedAutomation.id}`);
     },
   });
   const runAutomation = useMutation({
@@ -127,6 +158,15 @@ export function AutomationRunsScreen() {
                 <PencilIcon data-icon="inline-start" />
                 Edit automation
               </Link>
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={cloneAutomation.isPending}
+              onClick={() => cloneAutomation.mutate(automation)}
+            >
+              <CopyIcon data-icon="inline-start" />
+              {cloneAutomation.isPending ? 'Cloning...' : 'Clone automation'}
             </Button>
             <Button type="button" onClick={() => setIsRunModalOpen(true)}>
               <PlayIcon data-icon="inline-start" />
