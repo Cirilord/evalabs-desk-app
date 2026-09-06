@@ -14,6 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { queryKeys } from '@/data/queryKeys';
 import sqlite from '@/data/sqlite';
 
+import { GenerateScriptPromptDialog } from './components/GenerateScriptPromptDialog';
 import { LibraryCombobox } from './components/LibraryCombobox';
 import { createAutomationSchema } from './schema';
 import type { CreateAutomationForm, CreateAutomationScreenProps } from './types';
@@ -32,6 +33,7 @@ export function CreateAutomationScreen(props: CreateAutomationScreenProps) {
   const {
     formState: { errors, isSubmitting },
     control,
+    getValues,
     handleSubmit,
     register,
     setError,
@@ -78,15 +80,18 @@ export function CreateAutomationScreen(props: CreateAutomationScreenProps) {
   return (
     <main className="flex-1 p-6 sm:p-10">
       <div className="w-full">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            {isEditing ? 'Edit automation' : 'Create automation'}
-          </h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            {isEditing
-              ? 'Update the script, inputs, and outputs of this automation.'
-              : 'Start with a name, a short description, and the script that runs the automation.'}
-          </p>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">
+              {isEditing ? 'Edit automation' : 'Create automation'}
+            </h1>
+            <p className="mt-2 text-sm text-muted-foreground">
+              {isEditing
+                ? 'Update the script, inputs, and outputs of this automation.'
+                : 'Start with a name, a short description, and the script that runs the automation.'}
+            </p>
+          </div>
+          <GenerateScriptPromptDialog getAutomation={getValues} />
         </div>
 
         <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
