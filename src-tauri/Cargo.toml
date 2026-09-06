@@ -1,6 +1,6 @@
 [package]
 name = "evalabs-desk-app"
-version = "1.0.3"
+version = "1.0.4"
 description = "EVA Labs desktop automation runner"
 authors = ["you"]
 edition = "2021"
