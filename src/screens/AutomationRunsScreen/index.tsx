@@ -208,6 +208,9 @@ export function AutomationRunsScreen() {
                       <span className="text-sm text-muted-foreground">
                         {new Date(run.startedAt).toLocaleString()}
                       </span>
+                      {run.runnerVersion ? (
+                        <span className="text-sm text-muted-foreground">{run.runnerVersion}</span>
+                      ) : null}
                     </div>
                     <div className="flex items-center gap-3">
                       {run.finishedAt ? (

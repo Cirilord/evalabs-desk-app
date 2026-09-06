@@ -46,5 +46,17 @@ pub fn migrations() -> Vec<Migration> {
             sql: include_str!("../migrations/0007_add_automation_script_source.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 8,
+            description: "add_run_python_version",
+            sql: include_str!("../migrations/0008_add_run_python_version.sql"),
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 9,
+            description: "rename_run_python_version",
+            sql: include_str!("../migrations/0009_rename_run_python_version.sql"),
+            kind: MigrationKind::Up,
+        },
     ]
 }

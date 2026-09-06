@@ -76,6 +76,7 @@ export type $RunPayload = {
   outputs: Record<string, unknown>;
   logs: string;
   error: string;
+  runnerVersion: string;
   startedAt: string;
   finishedAt: string | null;
 };

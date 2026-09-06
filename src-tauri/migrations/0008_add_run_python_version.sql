@@ -1,0 +1,1 @@
+ALTER TABLE runs ADD COLUMN python_version TEXT NOT NULL DEFAULT '';

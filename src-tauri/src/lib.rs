@@ -303,6 +303,30 @@ async fn resolve_python_executable(app: &AppHandle) -> Result<String, String> {
     }
 }
 
+fn detect_runner_version(python_executable: &str) -> Result<String, String> {
+    let output = Command::new(python_executable)
+        .arg("--version")
+        .output()
+        .map_err(|error| format!("Failed to inspect Python version: {error}"))?;
+
+    if !output.status.success() {
+        return Err("Failed to inspect Python version.".to_owned());
+    }
+
+    let version = String::from_utf8_lossy(&output.stdout).trim().to_owned();
+    let version = if version.is_empty() {
+        String::from_utf8_lossy(&output.stderr).trim().to_owned()
+    } else {
+        version
+    };
+
+    if version.is_empty() {
+        return Err("Python did not report its version.".to_owned());
+    }
+
+    Ok(version)
+}
+
 fn execute_python_script(
     python_executable: String,
     inline_script: Option<String>,
@@ -504,17 +528,19 @@ async fn start_automation_run(
     }
 
     let python_executable = resolve_python_executable(&app).await?;
+    let runner_version = detect_runner_version(&python_executable)?;
 
     let run_id = generate_run_id()?;
     let inputs_json = serde_json::to_string(&inputs).map_err(|error| error.to_string())?;
     let database = open_database(&app).await?;
 
     sqlx::query(
-        "INSERT INTO runs (id, automation_id, status, inputs_json, started_at) VALUES (?, ?, 'running', ?, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))",
+        "INSERT INTO runs (id, automation_id, status, inputs_json, runner_version, started_at) VALUES (?, ?, 'running', ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))",
     )
     .bind(&run_id)
     .bind(&automation_id)
     .bind(inputs_json)
+    .bind(runner_version)
     .execute(&database)
     .await
     .map_err(|error| format!("Failed to create run: {error}"))?;

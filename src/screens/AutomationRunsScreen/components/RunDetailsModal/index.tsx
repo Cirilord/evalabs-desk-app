@@ -32,7 +32,7 @@ export function RunDetailsModal({ onOpenChange, open, run }: RunDetailsModalProp
           </div>
 
           <div className="min-h-0 overflow-y-auto px-6 py-5">
-            <dl className="grid gap-4 text-sm sm:grid-cols-3">
+            <dl className="grid gap-4 text-sm sm:grid-cols-4">
               <div className="flex flex-col gap-1">
                 <dt className="text-muted-foreground">Status</dt>
                 <dd className="font-medium">{getStatusLabel(run.status)}</dd>
@@ -44,6 +44,10 @@ export function RunDetailsModal({ onOpenChange, open, run }: RunDetailsModalProp
               <div className="flex flex-col gap-1">
                 <dt className="text-muted-foreground">Duration</dt>
                 <dd>{getDuration(run.startedAt, run.finishedAt)}</dd>
+              </div>
+              <div className="flex flex-col gap-1">
+                <dt className="text-muted-foreground">Runner</dt>
+                <dd>{run.runnerVersion || 'Unknown'}</dd>
               </div>
             </dl>
 

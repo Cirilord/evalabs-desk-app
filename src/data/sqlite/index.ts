@@ -38,6 +38,7 @@ const runColumns = `
   outputs_json AS outputsJson,
   logs,
   error,
+  runner_version AS runnerVersion,
   started_at AS startedAt,
   finished_at AS finishedAt
 `;
