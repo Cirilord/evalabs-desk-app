@@ -64,5 +64,11 @@ pub fn migrations() -> Vec<Migration> {
             sql: include_str!("../migrations/0010_add_automation_libraries.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 11,
+            description: "add_run_preparing_status",
+            sql: include_str!("../migrations/0011_add_run_preparing_status.sql"),
+            kind: MigrationKind::Up,
+        },
     ]
 }

@@ -77,7 +77,7 @@ export type AutomationWhereInput = {
   id: string;
 };
 
-export type RunStatus = 'running' | 'succeeded' | 'failed';
+export type RunStatus = 'preparing' | 'running' | 'succeeded' | 'failed';
 
 export type $RunPayload = {
   id: string;

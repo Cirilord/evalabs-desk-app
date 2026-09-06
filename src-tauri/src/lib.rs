@@ -705,6 +705,21 @@ async fn complete_run(
     Ok(())
 }
 
+async fn update_run_status(
+    database: &SqlitePool,
+    run_id: &str,
+    status: &str,
+) -> Result<(), String> {
+    sqlx::query("UPDATE runs SET status = ? WHERE id = ?")
+        .bind(status)
+        .bind(run_id)
+        .execute(database)
+        .await
+        .map_err(|error| format!("Failed to update run status: {error}"))?;
+
+    Ok(())
+}
+
 #[tauri::command]
 async fn start_automation_run(
     app: AppHandle,
@@ -742,7 +757,7 @@ async fn start_automation_run(
     let database = open_database(&app).await?;
 
     sqlx::query(
-        "INSERT INTO runs (id, automation_id, status, inputs_json, runner_version, started_at) VALUES (?, ?, 'running', ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))",
+        "INSERT INTO runs (id, automation_id, status, inputs_json, runner_version, started_at) VALUES (?, ?, 'preparing', ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))",
     )
     .bind(&run_id)
     .bind(&automation_id)
@@ -764,19 +779,59 @@ async fn start_automation_run(
 
     tauri::async_runtime::spawn(async move {
         let execution = match tauri::async_runtime::spawn_blocking(move || {
-            let environment_python = prepare_automation_environment(
+            prepare_automation_environment(
                 &environment_app,
                 &environment_automation_id,
                 &python_executable,
                 &runner_version,
                 &libraries,
-            )?;
-
-            execute_python_script(environment_python, inline_script, script_path, inputs)
+            )
         })
         .await
         {
-            Ok(Ok(execution)) => execution,
+            Ok(Ok(environment_python)) => {
+                if let Err(error) = update_run_status(&database, &run_id, "running").await {
+                    PythonExecution {
+                        success: false,
+                        outputs: Value::Object(serde_json::Map::new()),
+                        logs: String::new(),
+                        error,
+                    }
+                } else {
+                    let _ = app.emit(
+                        "run:updated",
+                        RunUpdatedEvent {
+                            automation_id: automation_id.clone(),
+                            run_id: run_id.clone(),
+                        },
+                    );
+
+                    match tauri::async_runtime::spawn_blocking(move || {
+                        execute_python_script(
+                            environment_python,
+                            inline_script,
+                            script_path,
+                            inputs,
+                        )
+                    })
+                    .await
+                    {
+                        Ok(Ok(execution)) => execution,
+                        Ok(Err(error)) => PythonExecution {
+                            success: false,
+                            outputs: Value::Object(serde_json::Map::new()),
+                            logs: String::new(),
+                            error,
+                        },
+                        Err(error) => PythonExecution {
+                            success: false,
+                            outputs: Value::Object(serde_json::Map::new()),
+                            logs: String::new(),
+                            error: error.to_string(),
+                        },
+                    }
+                }
+            }
             Ok(Err(error)) => PythonExecution {
                 success: false,
                 outputs: Value::Object(serde_json::Map::new()),

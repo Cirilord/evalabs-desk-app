@@ -32,7 +32,14 @@ function normalizeInputs(automation: $AutomationPayload, values: Record<string, 
 }
 
 function getRunStatusLabel(status: $RunPayload['status']) {
-  return status.charAt(0).toUpperCase() + status.slice(1);
+  const labels = {
+    preparing: 'Installing dependencies',
+    running: 'Running',
+    succeeded: 'Succeeded',
+    failed: 'Failed',
+  };
+
+  return labels[status];
 }
 
 function getCloneName(name: string) {
@@ -225,7 +232,7 @@ export function AutomationRunsScreen() {
                           Finished {new Date(run.finishedAt).toLocaleTimeString()}
                         </span>
                       ) : null}
-                      {run.status === 'running' ? (
+                      {run.status === 'preparing' || run.status === 'running' ? (
                         <LoaderCircleIcon className="animate-spin text-muted-foreground" />
                       ) : null}
                       <Button
