@@ -1,27 +1,63 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { invoke } from '@tauri-apps/api/core';
-import { RefreshCwIcon, TerminalIcon } from 'lucide-react';
-import { Dialog } from 'radix-ui';
+import {
+  CheckIcon,
+  ChevronDownIcon,
+  DownloadIcon,
+  LoaderCircleIcon,
+  RefreshCwIcon,
+} from 'lucide-react';
+import { Dialog, Select, Tabs } from 'radix-ui';
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
 import { queryKeys } from '@/data/queryKeys';
 
-import type { PythonInterpreter, SettingsModalProps } from './types';
+import type { PythonInterpreter, PythonRunner, SettingsModalProps } from './types';
 
 export function SettingsModal(props: SettingsModalProps) {
   const { trigger } = props;
   const [open, setOpen] = useState(false);
-  const {
-    data: interpreter,
-    error,
-    isLoading,
-    refetch,
-  } = useQuery({
+  const [selectedRunnerVersion, setSelectedRunnerVersion] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  const { data: interpreter } = useQuery({
     queryKey: queryKeys.pythonInterpreter,
     queryFn: () => invoke<PythonInterpreter | null>('detect_python_interpreter'),
     enabled: open,
   });
+  const {
+    data: runners,
+    error: runnersError,
+    isLoading: areRunnersLoading,
+    refetch: refetchRunners,
+  } = useQuery({
+    queryKey: queryKeys.pythonRunners,
+    queryFn: () => invoke<PythonRunner[]>('list_python_runners'),
+    enabled: open,
+  });
+  const installRunner = useMutation({
+    mutationFn: (version: string) => invoke<PythonRunner>('install_python_runner', { version }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.pythonRunners });
+    },
+  });
+  const selectRunner = useMutation({
+    mutationFn: (version: string | null) => invoke('select_python_runner', { version }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.pythonRunners });
+    },
+  });
+  const activeRunner = runners?.find((runner) => runner.active);
+  const selectedRunner =
+    selectedRunnerVersion === 'system'
+      ? undefined
+      : (runners?.find((runner) => runner.version === selectedRunnerVersion) ??
+        activeRunner ??
+        runners?.[0]);
+  const isSystemSelected = selectedRunnerVersion === 'system' || !selectedRunner;
+  const isSystemActive = !activeRunner;
+  const runnerError = installRunner.error ?? selectRunner.error;
 
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
@@ -36,46 +72,184 @@ export function SettingsModal(props: SettingsModalProps) {
             </Dialog.Description>
           </div>
 
-          <div className="px-6 py-5">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <h2 className="font-medium">Interpreters</h2>
-                <p className="text-sm text-muted-foreground">
-                  Python is detected automatically from your system.
-                </p>
-              </div>
-              <Button type="button" variant="outline" size="sm" onClick={() => refetch()}>
-                <RefreshCwIcon data-icon="inline-start" />
-                Refresh
-              </Button>
-            </div>
+          <Tabs.Root defaultValue="general">
+            <Tabs.List className="flex border-b px-6" aria-label="Settings sections">
+              <Tabs.Trigger
+                className="border-b-2 border-transparent px-3 py-3 text-sm font-medium text-muted-foreground outline-none data-[state=active]:border-primary data-[state=active]:text-foreground"
+                value="general"
+              >
+                General
+              </Tabs.Trigger>
+              <Tabs.Trigger
+                className="border-b-2 border-transparent px-3 py-3 text-sm font-medium text-muted-foreground outline-none data-[state=active]:border-primary data-[state=active]:text-foreground"
+                value="runners"
+              >
+                Runners
+              </Tabs.Trigger>
+            </Tabs.List>
 
-            <div className="mt-4 rounded-lg border bg-muted/30 p-4">
-              {isLoading ? (
-                <p className="text-sm text-muted-foreground">Detecting Python...</p>
-              ) : error ? (
-                <p className="text-sm text-destructive">Could not detect the Python interpreter.</p>
-              ) : interpreter ? (
-                <div className="flex gap-3">
-                  <TerminalIcon className="mt-0.5" />
-                  <dl className="min-w-0 flex-1 text-sm">
-                    <div className="flex justify-between gap-4">
-                      <dt className="font-medium">{interpreter.name}</dt>
-                      <dd className="text-muted-foreground">{interpreter.version}</dd>
-                    </div>
-                    <div className="mt-2">
-                      <dt className="text-muted-foreground">Path</dt>
-                      <dd className="mt-1 break-all font-mono text-xs">{interpreter.path}</dd>
-                    </div>
-                  </dl>
+            <Tabs.Content className="px-6 py-5" value="general">
+              <h2 className="font-medium">General</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                General application settings will be available here.
+              </p>
+            </Tabs.Content>
+
+            <Tabs.Content className="px-6 py-5" value="runners">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <h2 className="font-medium">Python</h2>
+                  <p className="text-sm text-muted-foreground">
+                    Install a version with the bundled uv runner, then select the runner used by
+                    automations.
+                  </p>
                 </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  Python was not found in your system path.
+                <Button type="button" variant="outline" size="sm" onClick={() => refetchRunners()}>
+                  <RefreshCwIcon data-icon="inline-start" />
+                  Refresh
+                </Button>
+              </div>
+
+              <div className="mt-4">
+                {areRunnersLoading ? (
+                  <p className="text-sm text-muted-foreground">Loading Python runners...</p>
+                ) : runnersError ? (
+                  <p className="text-sm text-destructive">
+                    {runnersError instanceof Error ? runnersError.message : String(runnersError)}
+                  </p>
+                ) : selectedRunner || isSystemSelected ? (
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label>Python version</Label>
+                      <Select.Root
+                        value={isSystemSelected ? 'system' : selectedRunner?.version}
+                        onValueChange={setSelectedRunnerVersion}
+                      >
+                        <Select.Trigger className="flex h-9 w-full items-center justify-between rounded-md border bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50">
+                          <Select.Value />
+                          <Select.Icon asChild>
+                            <ChevronDownIcon />
+                          </Select.Icon>
+                        </Select.Trigger>
+                        <Select.Portal>
+                          <Select.Content
+                            className="z-[60] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md"
+                            position="popper"
+                          >
+                            <Select.Viewport className="p-1">
+                              <Select.Group>
+                                <Select.Item
+                                  className="cursor-default rounded-sm px-2 py-1.5 text-sm outline-none data-highlighted:bg-accent"
+                                  value="system"
+                                >
+                                  <Select.ItemText>System Python</Select.ItemText>
+                                </Select.Item>
+                                {runners?.map((runner) => (
+                                  <Select.Item
+                                    key={runner.version}
+                                    className="cursor-default rounded-sm px-2 py-1.5 text-sm outline-none data-highlighted:bg-accent"
+                                    value={runner.version}
+                                  >
+                                    <Select.ItemText>
+                                      Python {runner.version}
+                                      {runner.installed ? ' (installed)' : ''}
+                                    </Select.ItemText>
+                                  </Select.Item>
+                                ))}
+                              </Select.Group>
+                            </Select.Viewport>
+                          </Select.Content>
+                        </Select.Portal>
+                      </Select.Root>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-4 border-t pt-4">
+                      <div className="min-w-0 text-sm">
+                        <p className="font-medium">
+                          {isSystemSelected
+                            ? interpreter
+                              ? `Python ${interpreter.version}`
+                              : 'System Python was not found'
+                            : selectedRunner?.installed
+                              ? 'Installed with uv'
+                              : 'Not installed'}
+                        </p>
+                        {isSystemSelected && interpreter ? (
+                          <p className="mt-1 break-all font-mono text-xs text-muted-foreground">
+                            {interpreter.path}
+                          </p>
+                        ) : selectedRunner?.path ? (
+                          <p className="mt-1 break-all font-mono text-xs text-muted-foreground">
+                            {selectedRunner.path}
+                          </p>
+                        ) : null}
+                      </div>
+
+                      {isSystemSelected && isSystemActive ? (
+                        <span className="inline-flex shrink-0 items-center gap-1 text-sm font-medium text-primary">
+                          <CheckIcon className="size-4" />
+                          Active
+                        </span>
+                      ) : isSystemSelected && interpreter ? (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={selectRunner.isPending}
+                          onClick={() => selectRunner.mutate(null)}
+                        >
+                          {selectRunner.isPending ? (
+                            <LoaderCircleIcon className="animate-spin" />
+                          ) : null}
+                          Use
+                        </Button>
+                      ) : selectedRunner?.active ? (
+                        <span className="inline-flex shrink-0 items-center gap-1 text-sm font-medium text-primary">
+                          <CheckIcon className="size-4" />
+                          Active
+                        </span>
+                      ) : selectedRunner?.installed ? (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={selectRunner.isPending}
+                          onClick={() => selectRunner.mutate(selectedRunner?.version ?? null)}
+                        >
+                          {selectRunner.isPending ? (
+                            <LoaderCircleIcon className="animate-spin" />
+                          ) : null}
+                          Use
+                        </Button>
+                      ) : (
+                        <Button
+                          type="button"
+                          size="sm"
+                          disabled={installRunner.isPending}
+                          onClick={() => installRunner.mutate(selectedRunner?.version ?? '')}
+                        >
+                          {installRunner.isPending ? (
+                            <LoaderCircleIcon className="animate-spin" />
+                          ) : (
+                            <DownloadIcon />
+                          )}
+                          Install
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No Python runners are available.</p>
+                )}
+              </div>
+
+              {runnerError ? (
+                <p className="mt-3 text-sm text-destructive">
+                  {runnerError instanceof Error ? runnerError.message : String(runnerError)}
                 </p>
-              )}
-            </div>
-          </div>
+              ) : null}
+            </Tabs.Content>
+          </Tabs.Root>
 
           <div className="flex justify-end border-t px-6 py-4">
             <Dialog.Close asChild>

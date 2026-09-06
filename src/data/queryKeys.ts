@@ -3,4 +3,5 @@ export const queryKeys = {
   automation: (id: string) => ['automations', id] as const,
   runs: (automationId: string) => ['automations', automationId, 'runs'] as const,
   pythonInterpreter: ['interpreters', 'python'],
+  pythonRunners: ['runners', 'python'],
 } as const;

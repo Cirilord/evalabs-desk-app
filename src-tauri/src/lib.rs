@@ -13,6 +13,8 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 use tauri::{AppHandle, Emitter, Manager};
+use tauri_plugin_shell::process::Output as ShellOutput;
+use tauri_plugin_shell::ShellExt;
 
 static RUN_SEQUENCE: AtomicU64 = AtomicU64::new(0);
 
@@ -22,6 +24,23 @@ struct PythonInterpreter {
     path: String,
     version: String,
 }
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct PythonRunner {
+    version: String,
+    path: Option<String>,
+    installed: bool,
+    active: bool,
+}
+
+#[derive(Default, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct RunnerConfiguration {
+    python_version: Option<String>,
+}
+
+const SUPPORTED_PYTHON_VERSIONS: [&str; 5] = ["3.10", "3.11", "3.12", "3.13", "3.14"];
 
 #[derive(Default)]
 struct PythonExecution {
@@ -103,7 +122,189 @@ fn detect_python_interpreter() -> Result<Option<PythonInterpreter>, String> {
     }))
 }
 
+fn runner_configuration_path(app: &AppHandle) -> Result<PathBuf, String> {
+    Ok(app
+        .path()
+        .app_config_dir()
+        .map_err(|error| error.to_string())?
+        .join("runners.json"))
+}
+
+fn read_runner_configuration(app: &AppHandle) -> Result<RunnerConfiguration, String> {
+    let path = runner_configuration_path(app)?;
+
+    if !path.exists() {
+        return Ok(RunnerConfiguration::default());
+    }
+
+    let contents = fs::read_to_string(path)
+        .map_err(|error| format!("Failed to read runner configuration: {error}"))?;
+
+    serde_json::from_str(&contents)
+        .map_err(|error| format!("Failed to read runner configuration: {error}"))
+}
+
+fn write_runner_configuration(
+    app: &AppHandle,
+    configuration: &RunnerConfiguration,
+) -> Result<(), String> {
+    let path = runner_configuration_path(app)?;
+    let directory = path
+        .parent()
+        .ok_or_else(|| "Failed to resolve runner configuration directory.".to_owned())?;
+
+    fs::create_dir_all(directory)
+        .map_err(|error| format!("Failed to prepare runner configuration directory: {error}"))?;
+    let contents = serde_json::to_string(configuration).map_err(|error| error.to_string())?;
+
+    fs::write(path, contents)
+        .map_err(|error| format!("Failed to save runner configuration: {error}"))
+}
+
+#[cfg(debug_assertions)]
+fn development_uv_path() -> Result<PathBuf, String> {
+    let target = match (std::env::consts::OS, std::env::consts::ARCH) {
+        ("macos", "aarch64") => "aarch64-apple-darwin",
+        ("macos", "x86_64") => "x86_64-apple-darwin",
+        ("windows", "aarch64") => "aarch64-pc-windows-msvc.exe",
+        ("windows", "x86_64") => "x86_64-pc-windows-msvc.exe",
+        ("linux", "aarch64") => "aarch64-unknown-linux-gnu",
+        ("linux", "x86_64") => "x86_64-unknown-linux-gnu",
+        (operating_system, architecture) => {
+            return Err(format!(
+                "The bundled uv runner is not available for {operating_system}/{architecture}."
+            ))
+        }
+    };
+
+    Ok(PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("binaries")
+        .join(format!("uv-{target}")))
+}
+
+async fn run_uv(app: &AppHandle, arguments: &[&str]) -> Result<ShellOutput, String> {
+    #[cfg(debug_assertions)]
+    let command = app.shell().command(development_uv_path()?);
+    #[cfg(not(debug_assertions))]
+    let command = app
+        .shell()
+        .sidecar("binaries/uv")
+        .map_err(|error| format!("Failed to find the bundled uv runner: {error}"))?;
+
+    command
+        .args(arguments)
+        .output()
+        .await
+        .map_err(|error| format!("Failed to run the bundled uv runner: {error}"))
+}
+
+async fn find_uv_python(app: &AppHandle, version: &str) -> Result<Option<String>, String> {
+    let output = run_uv(
+        app,
+        &[
+            "python",
+            "find",
+            "--managed-python",
+            "--no-project",
+            "--no-python-downloads",
+            version,
+        ],
+    )
+    .await?;
+
+    if !output.status.success() {
+        return Ok(None);
+    }
+
+    let path = String::from_utf8_lossy(&output.stdout).trim().to_owned();
+
+    Ok((!path.is_empty()).then_some(path))
+}
+
+#[tauri::command]
+async fn list_python_runners(app: AppHandle) -> Result<Vec<PythonRunner>, String> {
+    let configuration = read_runner_configuration(&app)?;
+    let mut runners = Vec::with_capacity(SUPPORTED_PYTHON_VERSIONS.len());
+
+    for version in SUPPORTED_PYTHON_VERSIONS {
+        let path = find_uv_python(&app, version).await?;
+        runners.push(PythonRunner {
+            version: version.to_owned(),
+            installed: path.is_some(),
+            path,
+            active: configuration.python_version.as_deref() == Some(version),
+        });
+    }
+
+    Ok(runners)
+}
+
+#[tauri::command]
+async fn install_python_runner(app: AppHandle, version: String) -> Result<PythonRunner, String> {
+    if !SUPPORTED_PYTHON_VERSIONS.contains(&version.as_str()) {
+        return Err("Unsupported Python version.".to_owned());
+    }
+
+    let output = run_uv(&app, &["python", "install", &version]).await?;
+
+    if !output.status.success() {
+        let error = String::from_utf8_lossy(&output.stderr).trim().to_owned();
+        return Err(if error.is_empty() {
+            "uv could not install the requested Python version.".to_owned()
+        } else {
+            error
+        });
+    }
+
+    let path = find_uv_python(&app, &version)
+        .await?
+        .ok_or_else(|| "uv installed Python but its executable could not be located.".to_owned())?;
+    let configuration = RunnerConfiguration {
+        python_version: Some(version.clone()),
+    };
+    write_runner_configuration(&app, &configuration)?;
+
+    Ok(PythonRunner {
+        version,
+        path: Some(path),
+        installed: true,
+        active: true,
+    })
+}
+
+#[tauri::command]
+async fn select_python_runner(app: AppHandle, version: Option<String>) -> Result<(), String> {
+    if let Some(version) = &version {
+        if !SUPPORTED_PYTHON_VERSIONS.contains(&version.as_str()) {
+            return Err("Unsupported Python version.".to_owned());
+        }
+
+        if find_uv_python(&app, version).await?.is_none() {
+            return Err("Install this Python version before selecting it.".to_owned());
+        }
+    }
+
+    write_runner_configuration(
+        &app,
+        &RunnerConfiguration {
+            python_version: version,
+        },
+    )
+}
+
+async fn resolve_python_executable(app: &AppHandle) -> Result<String, String> {
+    let configuration = read_runner_configuration(app)?;
+
+    match configuration.python_version {
+        Some(version) => find_uv_python(app, &version)
+            .await?
+            .ok_or_else(|| format!("The active Python {version} runner is no longer installed.")),
+        None => Ok("python3".to_owned()),
+    }
+}
+
 fn execute_python_script(
+    python_executable: String,
     inline_script: Option<String>,
     script_path: Option<PathBuf>,
     inputs: Value,
@@ -126,7 +327,7 @@ fn execute_python_script(
     fs::write(&runner_path, PYTHON_RUNNER)
         .map_err(|error| format!("Failed to prepare Python runner: {error}"))?;
 
-    let output = Command::new("python3")
+    let output = Command::new(python_executable)
         .arg(&runner_path)
         .current_dir(&run_directory.path)
         .env("EVA_INPUTS", inputs)
@@ -302,6 +503,8 @@ async fn start_automation_run(
         return Err("input() is not supported. Define an automation input instead.".to_owned());
     }
 
+    let python_executable = resolve_python_executable(&app).await?;
+
     let run_id = generate_run_id()?;
     let inputs_json = serde_json::to_string(&inputs).map_err(|error| error.to_string())?;
     let database = open_database(&app).await?;
@@ -325,7 +528,7 @@ async fn start_automation_run(
 
     tauri::async_runtime::spawn(async move {
         let execution = match tauri::async_runtime::spawn_blocking(move || {
-            execute_python_script(inline_script, script_path, inputs)
+            execute_python_script(python_executable, inline_script, script_path, inputs)
         })
         .await
         {
@@ -362,6 +565,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_shell::init())
         .plugin(
             tauri_plugin_sql::Builder::default()
                 .add_migrations(database::DATABASE_URL, database::migrations())
@@ -369,6 +573,9 @@ pub fn run() {
         )
         .invoke_handler(tauri::generate_handler![
             detect_python_interpreter,
+            list_python_runners,
+            install_python_runner,
+            select_python_runner,
             start_automation_run
         ])
         .run(tauri::generate_context!())

@@ -14,6 +14,7 @@
     "lint:check": "eslint .",
     "prepare": "lefthook install || true",
     "commit-lint": "commitlint",
+    "download:uv": "node scripts/download-uv.mjs",
     "type-check": "tsc --noEmit --project tsconfig.json"
   },
   "dependencies": {

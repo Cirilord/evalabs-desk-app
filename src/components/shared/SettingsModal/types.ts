@@ -6,6 +6,13 @@ export type PythonInterpreter = {
   version: string;
 };
 
+export type PythonRunner = {
+  version: string;
+  path: string | null;
+  installed: boolean;
+  active: boolean;
+};
+
 export type SettingsModalProps = {
   trigger: ReactElement;
 };

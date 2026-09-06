@@ -5,3 +5,17 @@ This template should help get you started developing with Tauri, React and Types
 ## Recommended IDE Setup
 
 - [VS Code](https://code.visualstudio.com/) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer)
+
+## Bundled uv
+
+Download the `uv` sidecars before running or packaging the desktop app:
+
+```bash
+yarn download:uv
+```
+
+For local development, download only the current target when needed, for example:
+
+```bash
+yarn download:uv aarch64-apple-darwin
+```
