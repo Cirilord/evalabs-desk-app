@@ -296,6 +296,35 @@ class SQLiteClient {
 
         return runs.map(mapRun);
       },
+
+      findLatestByAutomation: async () => {
+        const database = await this.db;
+        const runs = await database.select<RunDatabaseRecord[]>(`
+          SELECT
+            id,
+            automationId,
+            status,
+            inputsJson,
+            outputsJson,
+            logs,
+            error,
+            runnerVersion,
+            startedAt,
+            finishedAt
+          FROM (
+            SELECT
+              ${runColumns},
+              ROW_NUMBER() OVER (
+                PARTITION BY automation_id
+                ORDER BY started_at DESC, id DESC
+              ) AS run_position
+            FROM runs
+          )
+          WHERE run_position = 1
+        `);
+
+        return runs.map(mapRun);
+      },
     };
   }
 }

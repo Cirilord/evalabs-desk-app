@@ -1,8 +1,10 @@
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { invoke } from '@tauri-apps/api/core';
 import { LogicalPosition } from '@tauri-apps/api/dpi';
+import { listen } from '@tauri-apps/api/event';
 import { Menu } from '@tauri-apps/api/menu';
-import { CircleIcon, PlusIcon, SettingsIcon, SparklesIcon } from 'lucide-react';
+import { PlusIcon, SettingsIcon, SparklesIcon } from 'lucide-react';
+import { useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 import { SettingsModal } from '@/components/shared/SettingsModal';
@@ -23,15 +25,50 @@ import {
 } from '@/components/ui/sidebar';
 import { queryKeys } from '@/data/queryKeys';
 import sqlite from '@/data/sqlite';
-import type { $AutomationPayload } from '@/data/sqlite/types';
+import type { $AutomationPayload, $RunPayload } from '@/data/sqlite/types';
 
 import type { AppSidebarProps } from './types';
+
+function getRunIndicator(status: $RunPayload['status'] | undefined) {
+  switch (status) {
+    case 'preparing':
+      return {
+        className: 'animate-pulse fill-current text-warning',
+        label: 'Installing dependencies',
+      };
+    case 'running':
+      return { className: 'animate-pulse fill-current text-primary', label: 'Running' };
+    case 'succeeded':
+      return { className: 'fill-current text-success', label: 'Succeeded' };
+    case 'failed':
+      return { className: 'fill-current text-destructive', label: 'Failed' };
+    default:
+      return { className: 'text-muted-foreground', label: 'No runs yet' };
+  }
+}
 
 export function AppSidebar(props: AppSidebarProps) {
   const { automations, isLoading, loadError } = props;
   const location = useLocation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { data: latestRuns = [] } = useQuery({
+    queryKey: queryKeys.latestRuns,
+    queryFn: () => sqlite.run.findLatestByAutomation(),
+  });
+  const latestRunByAutomation = new Map(latestRuns.map((run) => [run.automationId, run] as const));
+
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+
+    void listen('run:updated', () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.latestRuns });
+    }).then((dispose) => {
+      unlisten = dispose;
+    });
+
+    return () => unlisten?.();
+  }, [queryClient]);
 
   async function cloneAutomation(automation: $AutomationPayload) {
     const suffix = ' copy';
@@ -125,25 +162,36 @@ export function AppSidebar(props: AppSidebarProps) {
               </p>
             ) : (
               <SidebarMenu>
-                {automations.map((automation) => (
-                  <SidebarMenuItem key={automation.id}>
-                    <SidebarMenuButton
-                      className="select-none"
-                      tooltip={automation.name}
-                      onClick={() => navigate(`/automations/${automation.id}`)}
-                      onContextMenu={(event) => {
-                        event.preventDefault();
-                        void showAutomationMenu(automation, {
-                          x: event.clientX,
-                          y: event.clientY,
-                        });
-                      }}
-                    >
-                      <CircleIcon />
-                      <span>{automation.name}</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
+                {automations.map((automation) => {
+                  const indicator = getRunIndicator(
+                    latestRunByAutomation.get(automation.id)?.status
+                  );
+
+                  return (
+                    <SidebarMenuItem key={automation.id}>
+                      <SidebarMenuButton
+                        className="select-none"
+                        tooltip={`${automation.name}: ${indicator.label}`}
+                        onClick={() => navigate(`/automations/${automation.id}`)}
+                        onContextMenu={(event) => {
+                          event.preventDefault();
+                          void showAutomationMenu(automation, {
+                            x: event.clientX,
+                            y: event.clientY,
+                          });
+                        }}
+                      >
+                        <span
+                          aria-hidden="true"
+                          className={`flex size-4 shrink-0 items-center justify-center rounded-full border-2 border-current ${indicator.className}`}
+                        >
+                          <span className="size-1.5 rounded-full bg-current" />
+                        </span>
+                        <span>{automation.name}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
               </SidebarMenu>
             )}
           </SidebarGroupContent>
