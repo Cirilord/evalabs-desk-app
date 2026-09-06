@@ -77,7 +77,7 @@ export function CreateAutomationScreen(props: CreateAutomationScreenProps) {
 
   return (
     <main className="flex-1 p-6 sm:p-10">
-      <div className="mx-auto w-full max-w-xl">
+      <div className="w-full">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">
             {isEditing ? 'Edit automation' : 'Create automation'}

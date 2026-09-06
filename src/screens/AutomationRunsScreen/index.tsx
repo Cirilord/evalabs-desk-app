@@ -158,7 +158,7 @@ export function AutomationRunsScreen() {
 
   return (
     <main className="flex-1 p-6 sm:p-10">
-      <div className="mx-auto flex w-full max-w-4xl flex-col gap-8">
+      <div className="flex w-full flex-col gap-8">
         <header className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">{automation.name}</h1>
