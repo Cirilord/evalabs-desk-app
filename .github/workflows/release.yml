@@ -39,6 +39,17 @@ jobs:
       - name: Install dependencies
         run: yarn install --frozen-lockfile
 
+      - name: Configure Git author
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Verify quality gates
+        run: |
+          yarn format:check
+          yarn lint:check
+          yarn type-check
+
       - name: Create version commit and tag
         run: yarn release --ci ${{ inputs.increment }}
 
