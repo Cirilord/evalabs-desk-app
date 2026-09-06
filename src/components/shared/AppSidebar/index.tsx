@@ -1,4 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
+import { invoke } from '@tauri-apps/api/core';
 import { LogicalPosition } from '@tauri-apps/api/dpi';
 import { Menu } from '@tauri-apps/api/menu';
 import { CircleIcon, PlusIcon, SettingsIcon, SparklesIcon } from 'lucide-react';
@@ -53,6 +54,7 @@ export function AppSidebar(props: AppSidebarProps) {
   }
 
   async function deleteAutomation(automation: $AutomationPayload) {
+    await invoke('delete_automation_environment', { automationId: automation.id });
     await sqlite.automation.delete({ where: { id: automation.id } });
     await queryClient.invalidateQueries({ queryKey: queryKeys.automations });
 

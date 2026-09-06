@@ -338,12 +338,31 @@ fn detect_runner_version(python_executable: &str) -> Result<String, String> {
 }
 
 fn automation_environment_path(app: &AppHandle, automation_id: &str) -> Result<PathBuf, String> {
+    if automation_id.is_empty()
+        || !automation_id
+            .chars()
+            .all(|character| character.is_ascii_alphanumeric() || character == '-')
+    {
+        return Err("Invalid automation identifier.".to_owned());
+    }
+
     Ok(app
         .path()
         .app_data_dir()
         .map_err(|error| error.to_string())?
         .join("automation-environments")
         .join(automation_id))
+}
+
+#[tauri::command]
+fn delete_automation_environment(app: AppHandle, automation_id: String) -> Result<(), String> {
+    let environment_path = automation_environment_path(&app, &automation_id)?;
+
+    match fs::remove_dir_all(environment_path) {
+        Ok(()) => Ok(()),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
+        Err(error) => Err(format!("Failed to remove automation environment: {error}")),
+    }
 }
 
 fn environment_python_path(environment_path: &Path) -> PathBuf {
@@ -777,6 +796,7 @@ pub fn run() {
             list_python_runners,
             install_python_runner,
             select_python_runner,
+            delete_automation_environment,
             start_automation_run
         ])
         .run(tauri::generate_context!())

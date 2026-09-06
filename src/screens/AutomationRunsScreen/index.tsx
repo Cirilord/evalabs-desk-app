@@ -73,7 +73,12 @@ export function AutomationRunsScreen() {
     enabled: Boolean(automationId),
   });
   const deleteAutomation = useMutation({
-    mutationFn: () => sqlite.automation.delete({ where: { id: automationId ?? '' } }),
+    mutationFn: async () => {
+      const id = automationId ?? '';
+
+      await invoke('delete_automation_environment', { automationId: id });
+      await sqlite.automation.delete({ where: { id } });
+    },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.automations });
       await navigate('/');
