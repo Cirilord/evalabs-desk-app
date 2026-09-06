@@ -51,7 +51,7 @@ function buildScriptPrompt(automation: CreateAutomationForm) {
   const name = automation.name.trim() || 'Untitled automation';
   const description = automation.description.trim() || 'No description provided.';
 
-  return `You are an expert Python automation developer. Write the complete Python script for the following Eva automation.
+  return `You are an expert Python automation developer. Write the complete Python script for the following EVA Labs automation.
 
 Automation name: ${name}
 Description: ${description}

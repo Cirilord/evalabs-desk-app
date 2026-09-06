@@ -1,6 +1,6 @@
 use tauri_plugin_sql::{Migration, MigrationKind};
 
-pub const DATABASE_URL: &str = "sqlite:eva.db";
+pub const DATABASE_URL: &str = "sqlite:evalabs.db";
 
 pub fn migrations() -> Vec<Migration> {
     vec![

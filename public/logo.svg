@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1254 1254" width="1254" height="1254">
+  <rect width="1254" height="1254" fill="#0B0B0C"/>
+  <defs>
+    <mask id="middle-gap">
+      <rect width="1254" height="1254" fill="#FFFFFF"/>
+      <circle cx="817" cy="622" r="69" fill="#000000"/>
+    </mask>
+  </defs>
+  <g mask="url(#middle-gap)" fill="none" stroke="#FFFFFF" stroke-width="80" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M 825 371 L 468 371 C 340 371 340 559 468 559 L 701.173 559 C 794.685 559 794.685 685 701.173 685 L 461 685 C 338 685 338 858 461 858 L 840 858"/>
+  </g>
+  <circle cx="825" cy="371" r="78" fill="#FFFFFF"/>
+  <circle cx="817" cy="622" r="52" fill="#FFFFFF"/>
+  <circle cx="840" cy="858" r="84" fill="#FFFFFF"/>
+</svg>

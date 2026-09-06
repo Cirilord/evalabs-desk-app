@@ -3,7 +3,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { LogicalPosition } from '@tauri-apps/api/dpi';
 import { listen } from '@tauri-apps/api/event';
 import { Menu } from '@tauri-apps/api/menu';
-import { PlusIcon, SettingsIcon, SparklesIcon } from 'lucide-react';
+import { PlusIcon, SettingsIcon } from 'lucide-react';
 import { useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 
@@ -127,10 +127,10 @@ export function AppSidebar(props: AppSidebarProps) {
       <SidebarHeader className="h-12 justify-center border-b border-sidebar-border px-2 py-0">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" tooltip="Eva" asChild>
+            <SidebarMenuButton size="lg" tooltip="EVA Labs" asChild>
               <Link to="/">
-                <SparklesIcon />
-                <span className="font-semibold">Eva</span>
+                <img alt="" aria-hidden="true" className="size-8 rounded-md" src="/logo.svg" />
+                <span className="font-semibold">EVA Labs</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>

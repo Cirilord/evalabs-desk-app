@@ -16,7 +16,7 @@ import type {
   RunFindManyArgs,
 } from '@/data/sqlite/types';
 
-const DATABASE_URL = 'sqlite:eva.db';
+const DATABASE_URL = 'sqlite:evalabs.db';
 
 const automationColumns = `
   id,

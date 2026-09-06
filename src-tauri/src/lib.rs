@@ -84,7 +84,8 @@ impl TemporaryRunDirectory {
             .duration_since(UNIX_EPOCH)
             .map_err(|error| error.to_string())?
             .as_nanos();
-        let path = std::env::temp_dir().join(format!("eva-run-{}-{timestamp}", std::process::id()));
+        let path =
+            std::env::temp_dir().join(format!("evalabs-run-{}-{timestamp}", std::process::id()));
 
         fs::create_dir(&path)
             .map_err(|error| format!("Failed to prepare run directory: {error}"))?;
@@ -374,7 +375,7 @@ fn environment_python_path(environment_path: &Path) -> PathBuf {
 }
 
 fn runner_metadata_path(environment_path: &Path) -> PathBuf {
-    environment_path.join(".eva-runner")
+    environment_path.join(".evalabs-runner")
 }
 
 fn environment_uses_runner(
@@ -664,7 +665,7 @@ async fn open_database(app: &AppHandle) -> Result<SqlitePool, String> {
         .path()
         .app_config_dir()
         .map_err(|error| error.to_string())?
-        .join("eva.db");
+        .join("evalabs.db");
     let database_url = format!("sqlite:{}", database_path.display());
 
     SqlitePool::connect(&database_url)

@@ -76,7 +76,7 @@ if (unsupportedTargets.length > 0) {
 }
 
 await mkdir(BINARIES_DIRECTORY, { recursive: true });
-const temporaryDirectory = await mkdtemp(join(tmpdir(), 'eva-uv-'));
+const temporaryDirectory = await mkdtemp(join(tmpdir(), 'evalabs-uv-'));
 
 try {
   for (const target of requestedTargets) {

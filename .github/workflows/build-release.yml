@@ -1,4 +1,4 @@
-name: Build release
+name: Build EVA Labs release
 
 on:
   workflow_dispatch:
