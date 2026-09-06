@@ -7,19 +7,24 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Dependencies and build output
 node_modules
 dist
 dist-ssr
+
+# Local application files
 *.local
 src-tauri/binaries/
 
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
+# Editor metadata
 .idea
-.DS_Store
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
+
+# Operating system files
+.DS_Store
+
+# Temporary editor files
 *.sw?
