@@ -12,7 +12,7 @@ use std::{
     sync::atomic::{AtomicU64, Ordering},
     time::{SystemTime, UNIX_EPOCH},
 };
-use tauri::{AppHandle, Emitter, Manager};
+use tauri::{AppHandle, Emitter, Manager, PhysicalPosition, PhysicalSize};
 use tauri_plugin_shell::process::Output as ShellOutput;
 use tauri_plugin_shell::ShellExt;
 
@@ -571,6 +571,26 @@ pub fn run() {
                 .add_migrations(database::DATABASE_URL, database::migrations())
                 .build(),
         )
+        .setup(|app| {
+            let window = app
+                .get_webview_window("main")
+                .ok_or("Failed to find the main window.")?;
+
+            if let Some(monitor) = window.primary_monitor()? {
+                let work_area = monitor.work_area();
+                let height = (work_area.size.height as f64 * 0.9).round() as u32;
+                let width = (work_area.size.width as f64 * 0.7).round() as u32;
+                let x = work_area.position.x + (work_area.size.width as i32 - width as i32) / 2;
+                let y = work_area.position.y + (work_area.size.height as i32 - height as i32) / 2;
+
+                window.set_size(PhysicalSize::new(width, height))?;
+                window.set_position(PhysicalPosition::new(x, y))?;
+            }
+
+            window.show()?;
+
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             detect_python_interpreter,
             list_python_runners,
