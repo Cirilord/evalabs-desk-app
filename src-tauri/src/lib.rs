@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sqlx::SqlitePool;
 use std::{
+    ffi::OsStr,
     fs,
     path::{Path, PathBuf},
     process::Command,
@@ -17,6 +18,25 @@ use tauri_plugin_shell::process::Output as ShellOutput;
 use tauri_plugin_shell::ShellExt;
 
 static RUN_SEQUENCE: AtomicU64 = AtomicU64::new(0);
+
+#[cfg(windows)]
+const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+
+fn background_command(program: impl AsRef<OsStr>) -> Command {
+    let command = Command::new(program);
+
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+
+        let mut command = command;
+        command.creation_flags(CREATE_NO_WINDOW);
+        return command;
+    }
+
+    #[cfg(not(windows))]
+    command
+}
 
 #[derive(Serialize)]
 struct PythonInterpreter {
@@ -102,7 +122,7 @@ impl Drop for TemporaryRunDirectory {
 
 #[tauri::command]
 fn detect_python_interpreter() -> Result<Option<PythonInterpreter>, String> {
-    let output = match Command::new("python3")
+    let output = match background_command("python3")
         .args([
             "-c",
             "import sys; print(sys.executable); print(sys.version.split()[0])",
@@ -315,7 +335,7 @@ async fn resolve_python_executable(app: &AppHandle) -> Result<String, String> {
 }
 
 fn detect_runner_version(python_executable: &str) -> Result<String, String> {
-    let output = Command::new(python_executable)
+    let output = background_command(python_executable)
         .arg("--version")
         .output()
         .map_err(|error| format!("Failed to inspect Python version: {error}"))?;
@@ -558,7 +578,7 @@ fn execute_python_script(
     fs::write(&runner_path, PYTHON_RUNNER)
         .map_err(|error| format!("Failed to prepare Python runner: {error}"))?;
 
-    let output = Command::new(python_executable)
+    let output = background_command(python_executable)
         .arg(&runner_path)
         .current_dir(&run_directory.path)
         .env("EVA_INPUTS", inputs)
