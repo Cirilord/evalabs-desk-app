@@ -441,6 +441,44 @@ fn library_requirement(library: &AutomationLibrary) -> Result<String, String> {
     Ok(format!("{name}=={version}"))
 }
 
+fn automation_requirements(libraries: &[AutomationLibrary]) -> Result<String, String> {
+    let mut requirements = libraries
+        .iter()
+        .map(library_requirement)
+        .collect::<Result<Vec<_>, _>>()?;
+    requirements.sort_unstable();
+    requirements.dedup();
+
+    Ok(requirements.join("\n"))
+}
+
+fn environment_has_requirements(environment_path: &Path, requirements: &str) -> bool {
+    let requirements_input_matches = fs::read_to_string(environment_path.join("requirements.in"))
+        .map(|contents| contents == requirements)
+        .unwrap_or(false);
+
+    requirements_input_matches && environment_path.join("requirements.txt").exists()
+}
+
+fn automation_environment_is_ready(
+    app: &AppHandle,
+    automation_id: &str,
+    runner_executable: &str,
+    runner_version: &str,
+    libraries: &[AutomationLibrary],
+) -> Result<bool, String> {
+    let environment_path = automation_environment_path(app, automation_id)?;
+    let environment_python = environment_python_path(&environment_path);
+    let requirements = automation_requirements(libraries)?;
+
+    Ok(environment_uses_runner(
+        &environment_path,
+        &environment_python,
+        runner_executable,
+        runner_version,
+    ) && environment_has_requirements(&environment_path, &requirements))
+}
+
 fn prepare_automation_environment(
     app: &AppHandle,
     automation_id: &str,
@@ -497,16 +535,15 @@ fn prepare_automation_environment(
         .map_err(|error| format!("Failed to record automation runner: {error}"))?;
     }
 
-    let mut requirements = libraries
-        .iter()
-        .map(library_requirement)
-        .collect::<Result<Vec<_>, _>>()?;
-    requirements.sort_unstable();
-    requirements.dedup();
+    let requirements = automation_requirements(libraries)?;
 
     let requirements_input_path = environment_path.join("requirements.in");
     let requirements_path = environment_path.join("requirements.txt");
-    fs::write(&requirements_input_path, requirements.join("\n"))
+    if environment_has_requirements(&environment_path, &requirements) {
+        return Ok(environment_python_string);
+    }
+
+    fs::write(&requirements_input_path, requirements)
         .map_err(|error| format!("Failed to write automation requirements: {error}"))?;
 
     let output = tauri::async_runtime::block_on(run_uv(
@@ -772,16 +809,29 @@ async fn start_automation_run(
 
     let python_executable = resolve_python_executable(&app).await?;
     let runner_version = detect_runner_version(&python_executable)?;
+    let needs_environment_preparation = !automation_environment_is_ready(
+        &app,
+        &automation_id,
+        &python_executable,
+        &runner_version,
+        &libraries,
+    )?;
+    let initial_status = if needs_environment_preparation {
+        "preparing"
+    } else {
+        "running"
+    };
 
     let run_id = generate_run_id()?;
     let inputs_json = serde_json::to_string(&inputs).map_err(|error| error.to_string())?;
     let database = open_database(&app).await?;
 
     sqlx::query(
-        "INSERT INTO runs (id, automation_id, status, inputs_json, runner_version, started_at) VALUES (?, ?, 'preparing', ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))",
+        "INSERT INTO runs (id, automation_id, status, inputs_json, runner_version, started_at) VALUES (?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))",
     )
     .bind(&run_id)
     .bind(&automation_id)
+    .bind(initial_status)
     .bind(inputs_json)
     .bind(&runner_version)
     .execute(&database)
@@ -811,7 +861,13 @@ async fn start_automation_run(
         .await
         {
             Ok(Ok(environment_python)) => {
-                if let Err(error) = update_run_status(&database, &run_id, "running").await {
+                let status_error = if needs_environment_preparation {
+                    update_run_status(&database, &run_id, "running").await.err()
+                } else {
+                    None
+                };
+
+                if let Some(error) = status_error {
                     PythonExecution {
                         success: false,
                         outputs: Value::Object(serde_json::Map::new()),
