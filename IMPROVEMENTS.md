@@ -7,3 +7,5 @@
   packages from registries such as Artifactory or GitHub Packages without exposing credentials.
 - Add Node.js runners and their dependency management, allowing JavaScript and TypeScript
   automations to install packages independently from Python environments.
+- Configure code signing for desktop releases: notarize macOS DMGs with an Apple Developer
+  certificate and sign Windows installers to reduce Gatekeeper and SmartScreen warnings.
