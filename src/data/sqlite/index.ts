@@ -9,6 +9,7 @@ import type {
   AutomationFindUniqueArgs,
   AutomationFindUniqueOrThrowArgs,
   AutomationInput,
+  AutomationLibrary,
   AutomationOutput,
   AutomationUpdateArgs,
   RunDatabaseRecord,
@@ -25,6 +26,7 @@ const automationColumns = `
   script_source AS scriptSource,
   script_path AS scriptPath,
   inputs_json AS inputsJson,
+  libraries_json AS librariesJson,
   outputs_json AS outputsJson,
   created_at AS createdAt,
   updated_at AS updatedAt
@@ -63,14 +65,43 @@ function parseAutomationOutputs(outputsJson: string): AutomationOutput[] {
   }
 }
 
+function parseAutomationLibraries(librariesJson: string): AutomationLibrary[] {
+  try {
+    const libraries: unknown = JSON.parse(librariesJson);
+
+    return Array.isArray(libraries)
+      ? libraries.flatMap((library) => {
+          if (typeof library === 'string') {
+            return [{ name: library, version: 'latest' }];
+          }
+
+          if (
+            library &&
+            typeof library === 'object' &&
+            typeof library.name === 'string' &&
+            typeof library.version === 'string'
+          ) {
+            return [{ name: library.name, version: library.version || 'latest' }];
+          }
+
+          return [];
+        })
+      : [];
+  } catch {
+    return [];
+  }
+}
+
 function mapAutomation({
   inputsJson,
+  librariesJson,
   outputsJson,
   ...automation
 }: AutomationDatabaseRecord): $AutomationPayload {
   return {
     ...automation,
     inputs: parseAutomationInputs(inputsJson),
+    libraries: parseAutomationLibraries(librariesJson),
     outputs: parseAutomationOutputs(outputsJson),
   };
 }
@@ -129,6 +160,7 @@ class SQLiteClient {
               script_source,
               script_path,
               inputs_json,
+              libraries_json,
               outputs_json,
               created_at,
               updated_at
@@ -142,6 +174,7 @@ class SQLiteClient {
               $6,
               $7,
               $8,
+              $9,
               strftime('%Y-%m-%dT%H:%M:%fZ', 'now'),
               strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
             )
@@ -154,6 +187,7 @@ class SQLiteClient {
             data.scriptSource,
             data.scriptPath,
             JSON.stringify(data.inputs),
+            JSON.stringify(data.libraries),
             JSON.stringify(data.outputs),
           ]
         );
@@ -223,9 +257,10 @@ class SQLiteClient {
               script_source = $4,
               script_path = $5,
               inputs_json = $6,
-              outputs_json = $7,
+              libraries_json = $7,
+              outputs_json = $8,
               updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
-            WHERE id = $8
+            WHERE id = $9
           `,
           [
             name,
@@ -234,6 +269,7 @@ class SQLiteClient {
             args.data.scriptSource,
             args.data.scriptPath,
             JSON.stringify(args.data.inputs),
+            JSON.stringify(args.data.libraries),
             JSON.stringify(args.data.outputs),
             args.where.id,
           ]

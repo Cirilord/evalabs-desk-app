@@ -14,6 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { queryKeys } from '@/data/queryKeys';
 import sqlite from '@/data/sqlite';
 
+import { LibraryCombobox } from './components/LibraryCombobox';
 import { createAutomationSchema } from './schema';
 import type { CreateAutomationForm, CreateAutomationScreenProps } from './types';
 
@@ -41,6 +42,7 @@ export function CreateAutomationScreen(props: CreateAutomationScreenProps) {
       script: automation?.script ?? '',
       scriptSource: automation?.scriptSource ?? 'inline',
       scriptPath: automation?.scriptPath ?? null,
+      libraries: automation?.libraries ?? [],
       inputs: automation?.inputs ?? [],
       outputs: automation?.outputs ?? [],
     },
@@ -122,6 +124,26 @@ export function CreateAutomationScreen(props: CreateAutomationScreenProps) {
               </p>
             ) : null}
           </div>
+
+          <section className="flex flex-col gap-2">
+            <div>
+              <h2 className="text-base font-medium">Libraries</h2>
+              <p className="text-sm text-muted-foreground">
+                Choose the PyPI packages this automation needs. They are saved with the automation
+                configuration; each package uses the latest release by default.
+              </p>
+            </div>
+            <Controller
+              control={control}
+              name="libraries"
+              render={({ field }) => (
+                <LibraryCombobox libraries={field.value} onChange={field.onChange} />
+              )}
+            />
+            {errors.libraries ? (
+              <p className="text-sm text-destructive">{errors.libraries.message}</p>
+            ) : null}
+          </section>
 
           <section className="flex flex-col gap-4">
             <div className="flex items-center justify-between gap-4">

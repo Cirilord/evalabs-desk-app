@@ -7,7 +7,7 @@ use serde_json::Value;
 use sqlx::SqlitePool;
 use std::{
     fs,
-    path::PathBuf,
+    path::{Path, PathBuf},
     process::Command,
     sync::atomic::{AtomicU64, Ordering},
     time::{SystemTime, UNIX_EPOCH},
@@ -54,6 +54,12 @@ struct PythonExecution {
 struct AutomationOutput {
     name: String,
     r#type: String,
+}
+
+#[derive(Deserialize)]
+struct AutomationLibrary {
+    name: String,
+    version: String,
 }
 
 #[derive(Serialize)]
@@ -182,7 +188,7 @@ fn development_uv_path() -> Result<PathBuf, String> {
         .join(format!("uv-{target}")))
 }
 
-async fn run_uv(app: &AppHandle, arguments: &[&str]) -> Result<ShellOutput, String> {
+async fn run_uv(app: &AppHandle, arguments: &[String]) -> Result<ShellOutput, String> {
     #[cfg(debug_assertions)]
     let command = app.shell().command(development_uv_path()?);
     #[cfg(not(debug_assertions))]
@@ -202,12 +208,12 @@ async fn find_uv_python(app: &AppHandle, version: &str) -> Result<Option<String>
     let output = run_uv(
         app,
         &[
-            "python",
-            "find",
-            "--managed-python",
-            "--no-project",
-            "--no-python-downloads",
-            version,
+            "python".to_owned(),
+            "find".to_owned(),
+            "--managed-python".to_owned(),
+            "--no-project".to_owned(),
+            "--no-python-downloads".to_owned(),
+            version.to_owned(),
         ],
     )
     .await?;
@@ -245,7 +251,11 @@ async fn install_python_runner(app: AppHandle, version: String) -> Result<Python
         return Err("Unsupported Python version.".to_owned());
     }
 
-    let output = run_uv(&app, &["python", "install", &version]).await?;
+    let output = run_uv(
+        &app,
+        &["python".to_owned(), "install".to_owned(), version.clone()],
+    )
+    .await?;
 
     if !output.status.success() {
         let error = String::from_utf8_lossy(&output.stderr).trim().to_owned();
@@ -325,6 +335,140 @@ fn detect_runner_version(python_executable: &str) -> Result<String, String> {
     }
 
     Ok(version)
+}
+
+fn automation_environment_path(app: &AppHandle, automation_id: &str) -> Result<PathBuf, String> {
+    Ok(app
+        .path()
+        .app_data_dir()
+        .map_err(|error| error.to_string())?
+        .join("automation-environments")
+        .join(automation_id))
+}
+
+fn environment_python_path(environment_path: &Path) -> PathBuf {
+    if cfg!(windows) {
+        environment_path.join("Scripts").join("python.exe")
+    } else {
+        environment_path.join("bin").join("python")
+    }
+}
+
+fn library_requirement(library: &AutomationLibrary) -> Result<String, String> {
+    let name = library.name.trim();
+    let version = library.version.trim();
+
+    if name.is_empty()
+        || !name.chars().all(|character| {
+            character.is_ascii_alphanumeric() || matches!(character, '-' | '_' | '.')
+        })
+    {
+        return Err(format!("Invalid library name: \"{}\".", library.name));
+    }
+
+    if version.eq_ignore_ascii_case("latest") {
+        return Ok(name.to_owned());
+    }
+
+    if version.is_empty()
+        || version.chars().any(char::is_whitespace)
+        || version.starts_with(['=', '>', '<', '!', '~'])
+    {
+        return Err(format!("Invalid version for library \"{name}\"."));
+    }
+
+    Ok(format!("{name}=={version}"))
+}
+
+fn prepare_automation_environment(
+    app: &AppHandle,
+    automation_id: &str,
+    runner_executable: &str,
+    libraries: &[AutomationLibrary],
+) -> Result<String, String> {
+    let environment_path = automation_environment_path(app, automation_id)?;
+    let environment_python = environment_python_path(&environment_path);
+    let environment_python_string = environment_python.to_string_lossy().into_owned();
+
+    fs::create_dir_all(&environment_path)
+        .map_err(|error| format!("Failed to prepare automation environment: {error}"))?;
+
+    if !environment_python.exists() {
+        let output = tauri::async_runtime::block_on(run_uv(
+            app,
+            &[
+                "venv".to_owned(),
+                "--python".to_owned(),
+                runner_executable.to_owned(),
+                environment_path.to_string_lossy().into_owned(),
+            ],
+        ))?;
+
+        if !output.status.success() {
+            let error = String::from_utf8_lossy(&output.stderr).trim().to_owned();
+            return Err(if error.is_empty() {
+                "Failed to create the automation environment.".to_owned()
+            } else {
+                format!("Failed to create the automation environment: {error}")
+            });
+        }
+    }
+
+    let mut requirements = libraries
+        .iter()
+        .map(library_requirement)
+        .collect::<Result<Vec<_>, _>>()?;
+    requirements.sort_unstable();
+    requirements.dedup();
+
+    let requirements_input_path = environment_path.join("requirements.in");
+    let requirements_path = environment_path.join("requirements.txt");
+    fs::write(&requirements_input_path, requirements.join("\n"))
+        .map_err(|error| format!("Failed to write automation requirements: {error}"))?;
+
+    let output = tauri::async_runtime::block_on(run_uv(
+        app,
+        &[
+            "pip".to_owned(),
+            "compile".to_owned(),
+            "--python".to_owned(),
+            environment_python_string.clone(),
+            "--output-file".to_owned(),
+            requirements_path.to_string_lossy().into_owned(),
+            requirements_input_path.to_string_lossy().into_owned(),
+        ],
+    ))?;
+
+    if !output.status.success() {
+        let error = String::from_utf8_lossy(&output.stderr).trim().to_owned();
+        return Err(if error.is_empty() {
+            "Failed to resolve automation libraries.".to_owned()
+        } else {
+            format!("Failed to resolve automation libraries: {error}")
+        });
+    }
+
+    let output = tauri::async_runtime::block_on(run_uv(
+        app,
+        &[
+            "pip".to_owned(),
+            "sync".to_owned(),
+            "--python".to_owned(),
+            environment_python_string.clone(),
+            requirements_path.to_string_lossy().into_owned(),
+        ],
+    ))?;
+
+    if !output.status.success() {
+        let error = String::from_utf8_lossy(&output.stderr).trim().to_owned();
+        return Err(if error.is_empty() {
+            "Failed to install automation libraries.".to_owned()
+        } else {
+            format!("Failed to install automation libraries: {error}")
+        });
+    }
+
+    Ok(environment_python_string)
 }
 
 fn execute_python_script(
@@ -506,6 +650,7 @@ async fn start_automation_run(
     script: String,
     script_source: String,
     script_path: Option<String>,
+    libraries: Vec<AutomationLibrary>,
     outputs: Vec<AutomationOutput>,
     inputs: Value,
 ) -> Result<StartedRun, String> {
@@ -552,9 +697,19 @@ async fn start_automation_run(
     app.emit("run:updated", &event)
         .map_err(|error| error.to_string())?;
 
+    let environment_app = app.clone();
+    let environment_automation_id = automation_id.clone();
+
     tauri::async_runtime::spawn(async move {
         let execution = match tauri::async_runtime::spawn_blocking(move || {
-            execute_python_script(python_executable, inline_script, script_path, inputs)
+            let environment_python = prepare_automation_environment(
+                &environment_app,
+                &environment_automation_id,
+                &python_executable,
+                &libraries,
+            )?;
+
+            execute_python_script(environment_python, inline_script, script_path, inputs)
         })
         .await
         {

@@ -5,14 +5,19 @@ export type $AutomationPayload = {
   script: string;
   scriptSource: AutomationScriptSource;
   scriptPath: string | null;
+  libraries: AutomationLibrary[];
   inputs: AutomationInput[];
   outputs: AutomationOutput[];
   createdAt: string;
   updatedAt: string;
 };
 
-export type AutomationDatabaseRecord = Omit<$AutomationPayload, 'inputs' | 'outputs'> & {
+export type AutomationDatabaseRecord = Omit<
+  $AutomationPayload,
+  'inputs' | 'outputs' | 'libraries'
+> & {
   inputsJson: string;
+  librariesJson: string;
   outputsJson: string;
 };
 
@@ -26,6 +31,11 @@ export type AutomationInput = {
 export type AutomationInputType = 'text' | 'file' | 'number' | 'boolean';
 
 export type AutomationScriptSource = 'inline' | 'file';
+
+export type AutomationLibrary = {
+  name: string;
+  version: string;
+};
 
 export type AutomationOutput = {
   name: string;
@@ -43,6 +53,7 @@ export type AutomationCreateInput = {
   script: string;
   scriptSource: AutomationScriptSource;
   scriptPath: string | null;
+  libraries: AutomationLibrary[];
   inputs: AutomationInput[];
   outputs: AutomationOutput[];
 };

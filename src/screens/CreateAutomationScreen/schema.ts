@@ -14,6 +14,11 @@ export const automationInputSchema = z.object({
 
 export const automationOutputSchema = automationInputSchema.omit({ required: true });
 
+export const automationLibrarySchema = z.object({
+  name: z.string().trim().min(1).max(200),
+  version: z.string().trim().min(1).max(100),
+});
+
 export const createAutomationSchema = z
   .object({
     name: z
@@ -25,6 +30,7 @@ export const createAutomationSchema = z
     script: z.string(),
     scriptSource: z.enum(['inline', 'file']),
     scriptPath: z.string().nullable(),
+    libraries: z.array(automationLibrarySchema).max(50),
     inputs: z.array(automationInputSchema),
     outputs: z.array(automationOutputSchema),
   })

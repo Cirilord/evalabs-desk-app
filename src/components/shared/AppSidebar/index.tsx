@@ -42,6 +42,7 @@ export function AppSidebar(props: AppSidebarProps) {
         script: automation.script,
         scriptSource: automation.scriptSource,
         scriptPath: automation.scriptPath,
+        libraries: automation.libraries,
         inputs: automation.inputs,
         outputs: automation.outputs,
       },

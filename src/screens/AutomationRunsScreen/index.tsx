@@ -88,6 +88,7 @@ export function AutomationRunsScreen() {
           script: automation.script,
           scriptSource: automation.scriptSource,
           scriptPath: automation.scriptPath,
+          libraries: automation.libraries,
           inputs: automation.inputs,
           outputs: automation.outputs,
         },
@@ -110,6 +111,7 @@ export function AutomationRunsScreen() {
         script: automation.script,
         scriptSource: automation.scriptSource,
         scriptPath: automation.scriptPath,
+        libraries: automation.libraries,
         outputs: automation.outputs,
         inputs,
       });
