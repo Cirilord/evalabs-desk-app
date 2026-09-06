@@ -1,0 +1,80 @@
+name: Build release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to build
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-release-${{ inputs.tag }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.platform }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macOS Apple Silicon
+            platform: macos-latest
+            args: --target aarch64-apple-darwin
+            rustTarget: aarch64-apple-darwin
+            uvTarget: aarch64-apple-darwin
+          - name: Windows x64
+            platform: windows-latest
+            args: ''
+            rustTarget: ''
+            uvTarget: x86_64-pc-windows-msvc
+          - name: Linux x64
+            platform: ubuntu-22.04
+            args: ''
+            rustTarget: ''
+            uvTarget: x86_64-unknown-linux-gnu
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
+
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf xdg-utils
+
+      - uses: actions/setup-node@v4
+        with:
+          cache: yarn
+          node-version: 20
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rustTarget }}
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: ./src-tauri -> target
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Download bundled uv
+        run: yarn download:uv ${{ matrix.uvTarget }}
+
+      - uses: tauri-apps/tauri-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          args: ${{ matrix.args }}
+          releaseBody: See the assets to download and install this version.
+          releaseDraft: true
+          releaseName: Release ${{ inputs.tag }}
+          tagName: ${{ inputs.tag }}

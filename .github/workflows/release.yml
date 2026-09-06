@@ -1,0 +1,52 @@
+name: Release version
+
+on:
+  workflow_dispatch:
+    inputs:
+      increment:
+        description: Version increment to release
+        required: true
+        default: patch
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+permissions:
+  actions: write
+  contents: write
+
+concurrency:
+  group: release-version
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: main
+
+      - uses: actions/setup-node@v4
+        with:
+          cache: yarn
+          node-version: 20
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Create version commit and tag
+        run: yarn release --ci ${{ inputs.increment }}
+
+      - name: Read released version
+        id: version
+        run: echo "value=$(node -p \"require('./package.json').version\")" >> "$GITHUB_OUTPUT"
+
+      - name: Start release build
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run build-release.yml --ref "v${{ steps.version.outputs.value }}" -f tag="v${{ steps.version.outputs.value }}"

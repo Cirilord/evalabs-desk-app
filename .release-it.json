@@ -1,0 +1,20 @@
+{
+  "$schema": "https://unpkg.com/release-it@18/schema/release-it.json",
+  "git": {
+    "commitMessage": "chore(release): release ${version}",
+    "push": true,
+    "requireBranch": "main",
+    "requireCleanWorkingDir": true,
+    "tagName": "v${version}"
+  },
+  "github": {
+    "release": false
+  },
+  "npm": {
+    "publish": false
+  },
+  "hooks": {
+    "after:bump": "node scripts/sync-tauri-version.mjs ${version}",
+    "before:git:release": ["yarn format:check", "yarn type-check", "yarn lint:check", "yarn build"]
+  }
+}
