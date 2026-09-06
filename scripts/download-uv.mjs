@@ -1,6 +1,6 @@
 import { execFile as execFileCallback } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 import { promisify } from 'node:util';
@@ -41,6 +41,28 @@ function verifyChecksum(archive, checksumFile, archiveName) {
   }
 }
 
+async function findExtractedBinary(directory, executableName) {
+  const entries = await readdir(directory, { withFileTypes: true });
+
+  for (const entry of entries) {
+    const entryPath = join(directory, entry.name);
+
+    if (entry.isFile() && entry.name === executableName) {
+      return entryPath;
+    }
+
+    if (entry.isDirectory()) {
+      const binary = await findExtractedBinary(entryPath, executableName);
+
+      if (binary) {
+        return binary;
+      }
+    }
+  }
+
+  return undefined;
+}
+
 async function downloadTarget(target, temporaryDirectory) {
   const fileName = archiveName(target);
   const archiveUrl = `${RELEASE_URL}/${fileName}`;
@@ -57,7 +79,11 @@ async function downloadTarget(target, temporaryDirectory) {
   await execFile('tar', ['-xf', archivePath, '-C', extractionDirectory]);
 
   const executableName = target.includes('windows') ? 'uv.exe' : 'uv';
-  const extractedBinary = join(extractionDirectory, `uv-${target}`, executableName);
+  const extractedBinary = await findExtractedBinary(extractionDirectory, executableName);
+  if (!extractedBinary) {
+    throw new Error(`Could not find ${executableName} in ${fileName}.`);
+  }
+
   const destination = new URL(
     `uv-${target}${target.includes('windows') ? '.exe' : ''}`,
     BINARIES_DIRECTORY
