@@ -195,7 +195,7 @@ async fn run_uv(app: &AppHandle, arguments: &[String]) -> Result<ShellOutput, St
     #[cfg(not(debug_assertions))]
     let command = app
         .shell()
-        .sidecar("binaries/uv")
+        .sidecar("uv")
         .map_err(|error| format!("Failed to find the bundled uv runner: {error}"))?;
 
     command
