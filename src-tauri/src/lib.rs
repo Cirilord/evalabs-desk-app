@@ -373,6 +373,27 @@ fn environment_python_path(environment_path: &Path) -> PathBuf {
     }
 }
 
+fn runner_metadata_path(environment_path: &Path) -> PathBuf {
+    environment_path.join(".eva-runner")
+}
+
+fn environment_uses_runner(
+    environment_path: &Path,
+    environment_python: &Path,
+    runner_executable: &str,
+    runner_version: &str,
+) -> bool {
+    let expected_metadata = format!("{runner_executable}\n{runner_version}");
+    let metadata_matches = fs::read_to_string(runner_metadata_path(environment_path))
+        .map(|metadata| metadata == expected_metadata)
+        .unwrap_or(false);
+
+    metadata_matches
+        && detect_runner_version(&environment_python.to_string_lossy())
+            .map(|environment_version| environment_version == runner_version)
+            .unwrap_or(false)
+}
+
 fn library_requirement(library: &AutomationLibrary) -> Result<String, String> {
     let name = library.name.trim();
     let version = library.version.trim();
@@ -403,16 +424,32 @@ fn prepare_automation_environment(
     app: &AppHandle,
     automation_id: &str,
     runner_executable: &str,
+    runner_version: &str,
     libraries: &[AutomationLibrary],
 ) -> Result<String, String> {
     let environment_path = automation_environment_path(app, automation_id)?;
     let environment_python = environment_python_path(&environment_path);
     let environment_python_string = environment_python.to_string_lossy().into_owned();
 
-    fs::create_dir_all(&environment_path)
-        .map_err(|error| format!("Failed to prepare automation environment: {error}"))?;
+    if environment_path.exists()
+        && !environment_uses_runner(
+            &environment_path,
+            &environment_python,
+            runner_executable,
+            runner_version,
+        )
+    {
+        fs::remove_dir_all(&environment_path)
+            .map_err(|error| format!("Failed to reset automation environment: {error}"))?;
+    }
 
     if !environment_python.exists() {
+        let environments_path = environment_path
+            .parent()
+            .ok_or_else(|| "Failed to locate automation environments directory.".to_owned())?;
+        fs::create_dir_all(environments_path)
+            .map_err(|error| format!("Failed to prepare automation environment: {error}"))?;
+
         let output = tauri::async_runtime::block_on(run_uv(
             app,
             &[
@@ -431,6 +468,12 @@ fn prepare_automation_environment(
                 format!("Failed to create the automation environment: {error}")
             });
         }
+
+        fs::write(
+            runner_metadata_path(&environment_path),
+            format!("{runner_executable}\n{runner_version}"),
+        )
+        .map_err(|error| format!("Failed to record automation runner: {error}"))?;
     }
 
     let mut requirements = libraries
@@ -704,7 +747,7 @@ async fn start_automation_run(
     .bind(&run_id)
     .bind(&automation_id)
     .bind(inputs_json)
-    .bind(runner_version)
+    .bind(&runner_version)
     .execute(&database)
     .await
     .map_err(|error| format!("Failed to create run: {error}"))?;
@@ -725,6 +768,7 @@ async fn start_automation_run(
                 &environment_app,
                 &environment_automation_id,
                 &python_executable,
+                &runner_version,
                 &libraries,
             )?;
 
