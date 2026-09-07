@@ -3,7 +3,6 @@ import { useEffect, useState } from 'react';
 import { HashRouter, Route, Routes, useLocation } from 'react-router-dom';
 
 import { AppLayout } from '@/components/shared/AppLayout';
-import { OnboardingScreen } from '@/components/shared/OnboardingScreen';
 import { TelemetryProvider } from '@/components/shared/TelemetryProvider';
 import { ThemeProvider } from '@/components/shared/ThemeProvider';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -12,6 +11,7 @@ import { AutomationRunsScreen } from '@/screens/AutomationRunsScreen';
 import { CreateAutomationScreen } from '@/screens/CreateAutomationScreen';
 import { EditAutomationScreen } from '@/screens/EditAutomationScreen';
 import { HomeScreen } from '@/screens/HomeScreen';
+import { OnboardingScreen } from '@/screens/OnboardingScreen';
 
 const queryClient = new QueryClient();
 const ONBOARDING_COMPLETED_KEY = 'eva-labs-onboarding-completed';
