@@ -10,6 +10,7 @@ import {
 import { Dialog, Select, Tabs } from 'radix-ui';
 import { useState } from 'react';
 
+import { useTheme } from '@/components/shared/ThemeProvider/use-theme';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { queryKeys } from '@/data/queryKeys';
@@ -20,6 +21,7 @@ export function SettingsModal(props: SettingsModalProps) {
   const { trigger } = props;
   const [open, setOpen] = useState(false);
   const [selectedRunnerVersion, setSelectedRunnerVersion] = useState<string | null>(null);
+  const { setTheme, theme } = useTheme();
   const queryClient = useQueryClient();
   const { data: interpreter } = useQuery({
     queryKey: queryKeys.pythonInterpreter,
@@ -89,10 +91,51 @@ export function SettingsModal(props: SettingsModalProps) {
             </Tabs.List>
 
             <Tabs.Content className="px-6 py-5" value="general">
-              <h2 className="font-medium">General</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                General application settings will be available here.
-              </p>
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <h2 className="font-medium">Appearance</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Choose how EVA Labs appears on this device.
+                  </p>
+                </div>
+                <Select.Root value={theme} onValueChange={setTheme}>
+                  <Select.Trigger className="flex h-9 w-36 shrink-0 items-center justify-between rounded-md border bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50">
+                    <Select.Value />
+                    <Select.Icon asChild>
+                      <ChevronDownIcon />
+                    </Select.Icon>
+                  </Select.Trigger>
+                  <Select.Portal>
+                    <Select.Content
+                      className="z-[60] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md"
+                      position="popper"
+                    >
+                      <Select.Viewport className="p-1">
+                        <Select.Group>
+                          <Select.Item
+                            className="cursor-default rounded-sm px-2 py-1.5 text-sm outline-none data-highlighted:bg-accent"
+                            value="system"
+                          >
+                            <Select.ItemText>System</Select.ItemText>
+                          </Select.Item>
+                          <Select.Item
+                            className="cursor-default rounded-sm px-2 py-1.5 text-sm outline-none data-highlighted:bg-accent"
+                            value="light"
+                          >
+                            <Select.ItemText>Light</Select.ItemText>
+                          </Select.Item>
+                          <Select.Item
+                            className="cursor-default rounded-sm px-2 py-1.5 text-sm outline-none data-highlighted:bg-accent"
+                            value="dark"
+                          >
+                            <Select.ItemText>Dark</Select.ItemText>
+                          </Select.Item>
+                        </Select.Group>
+                      </Select.Viewport>
+                    </Select.Content>
+                  </Select.Portal>
+                </Select.Root>
+              </div>
             </Tabs.Content>
 
             <Tabs.Content className="px-6 py-5" value="runners">

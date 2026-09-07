@@ -1,6 +1,8 @@
 import { python } from '@codemirror/lang-python';
+import { oneDark } from '@codemirror/theme-one-dark';
 import CodeMirror from '@uiw/react-codemirror';
 
+import { useTheme } from '@/components/shared/ThemeProvider/use-theme';
 import { cn } from '@/lib/utils';
 
 import type { CodeEditorProps } from './types';
@@ -9,6 +11,8 @@ const extensions = [python()];
 
 export function CodeEditor(props: CodeEditorProps) {
   const { describedBy, invalid, onBlur, onChange, value } = props;
+  const { resolvedTheme } = useTheme();
+
   return (
     <CodeMirror
       aria-describedby={describedBy}
@@ -25,7 +29,7 @@ export function CodeEditor(props: CodeEditorProps) {
       onBlur={onBlur}
       onChange={onChange}
       placeholder="# Write the automation script here"
-      theme="light"
+      theme={resolvedTheme === 'dark' ? oneDark : 'light'}
       value={value}
     />
   );
