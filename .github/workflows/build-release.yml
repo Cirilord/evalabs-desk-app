@@ -72,6 +72,7 @@ jobs:
       - uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          VITE_GA_MEASUREMENT_ID: ${{ secrets.GA_MEASUREMENT_ID }}
         with:
           args: ${{ matrix.args }}
           releaseBody: See the assets to download and install this version.

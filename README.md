@@ -19,3 +19,9 @@ For local development, download only the current target when needed, for example
 ```bash
 yarn download:uv aarch64-apple-darwin
 ```
+
+## Google Analytics
+
+Set `VITE_GA_MEASUREMENT_ID` in `.env.local` to enable analytics locally. For release builds,
+add the Measurement ID as the GitHub Actions secret `GA_MEASUREMENT_ID`. Telemetry is enabled by
+default and can be disabled during onboarding or later in Settings.

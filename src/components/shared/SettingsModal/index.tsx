@@ -7,9 +7,10 @@ import {
   LoaderCircleIcon,
   RefreshCwIcon,
 } from 'lucide-react';
-import { Dialog, Select, Tabs } from 'radix-ui';
+import { Checkbox, Dialog, Select, Tabs } from 'radix-ui';
 import { useState } from 'react';
 
+import { useTelemetry } from '@/components/shared/TelemetryProvider/use-telemetry';
 import { useTheme } from '@/components/shared/ThemeProvider/use-theme';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -21,6 +22,7 @@ export function SettingsModal(props: SettingsModalProps) {
   const { trigger } = props;
   const [open, setOpen] = useState(false);
   const [selectedRunnerVersion, setSelectedRunnerVersion] = useState<string | null>(null);
+  const { setTelemetry, telemetry } = useTelemetry();
   const { setTheme, theme } = useTheme();
   const queryClient = useQueryClient();
   const { data: interpreter } = useQuery({
@@ -135,6 +137,27 @@ export function SettingsModal(props: SettingsModalProps) {
                     </Select.Content>
                   </Select.Portal>
                 </Select.Root>
+              </div>
+
+              <div className="mt-5 flex items-start justify-between gap-4 border-t pt-5">
+                <div>
+                  <h2 className="font-medium">Usage telemetry</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Share anonymous app launches and screen navigation to help improve EVA Labs.
+                  </p>
+                </div>
+                <Checkbox.Root
+                  aria-label="Share anonymous usage telemetry"
+                  checked={telemetry === 'enabled'}
+                  className="mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-sm border border-input bg-background text-primary-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 data-[state=checked]:border-primary data-[state=checked]:bg-primary"
+                  onCheckedChange={(checked) =>
+                    setTelemetry(checked === true ? 'enabled' : 'disabled')
+                  }
+                >
+                  <Checkbox.Indicator>
+                    <CheckIcon className="size-3" />
+                  </Checkbox.Indicator>
+                </Checkbox.Root>
               </div>
             </Tabs.Content>
 

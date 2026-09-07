@@ -1,9 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { invoke } from '@tauri-apps/api/core';
 import { CheckIcon, ChevronDownIcon, DownloadIcon, LoaderCircleIcon } from 'lucide-react';
-import { Select, ToggleGroup } from 'radix-ui';
+import { Checkbox, Select, ToggleGroup } from 'radix-ui';
 import { useState } from 'react';
 
+import { useTelemetry } from '@/components/shared/TelemetryProvider/use-telemetry';
 import type { ThemePreference } from '@/components/shared/ThemeProvider/types';
 import { useTheme } from '@/components/shared/ThemeProvider/use-theme';
 import { Button } from '@/components/ui/button';
@@ -21,6 +22,7 @@ const themeOptions: { value: ThemePreference; label: string; description: string
 export function OnboardingScreen(props: OnboardingScreenProps) {
   const { onComplete } = props;
   const { setTheme, theme } = useTheme();
+  const { setTelemetry, telemetry } = useTelemetry();
   const [selectedRunnerVersion, setSelectedRunnerVersion] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const { data: interpreter } = useQuery({
@@ -218,6 +220,30 @@ export function OnboardingScreen(props: OnboardingScreenProps) {
                       ? `Python ${selectedRunner.version} is ready to use`
                       : 'Install this runner with bundled uv.'}
               </p>
+            </section>
+
+            <section className="border-t pt-6">
+              <div className="flex items-start gap-3">
+                <Checkbox.Root
+                  checked={telemetry === 'enabled'}
+                  className="mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-sm border border-input bg-background text-primary-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 data-[state=checked]:border-primary data-[state=checked]:bg-primary"
+                  id="telemetry"
+                  onCheckedChange={(checked) =>
+                    setTelemetry(checked === true ? 'enabled' : 'disabled')
+                  }
+                >
+                  <Checkbox.Indicator>
+                    <CheckIcon className="size-3" />
+                  </Checkbox.Indicator>
+                </Checkbox.Root>
+                <label className="cursor-pointer text-sm" htmlFor="telemetry">
+                  <span className="font-medium">Share anonymous usage telemetry</span>
+                  <span className="mt-1 block text-muted-foreground">
+                    Help improve EVA Labs with app launches and screen navigation. You can change
+                    this later in Settings.
+                  </span>
+                </label>
+              </div>
             </section>
           </div>
 
