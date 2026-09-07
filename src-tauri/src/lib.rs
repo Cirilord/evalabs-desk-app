@@ -899,7 +899,9 @@ pub fn run() {
             if let Some(monitor) = window.primary_monitor()? {
                 let work_area = monitor.work_area();
                 let height = (work_area.size.height as f64 * 0.9).round() as u32;
-                let width = (work_area.size.width as f64 * 0.7).round() as u32;
+                let width = ((work_area.size.width as f64 * 0.7).round() as u32)
+                    .max(1140)
+                    .min(work_area.size.width);
                 let x = work_area.position.x + (work_area.size.width as i32 - width as i32) / 2;
                 let y = work_area.position.y + (work_area.size.height as i32 - height as i32) / 2;
 
