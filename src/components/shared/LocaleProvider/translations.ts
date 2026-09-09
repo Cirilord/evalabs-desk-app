@@ -92,6 +92,8 @@ export const translations = {
     'runner.useSystemPython': 'Use system Python',
     'settings.appearance': 'Appearance',
     'settings.appearanceDescription': 'Choose how EVA Labs appears on this device.',
+    'settings.development': 'Development',
+    'settings.developmentDescription': 'Tools available only while developing EVA Labs.',
     'settings.general': 'General',
     'settings.language': 'Language',
     'settings.languageDescription': 'Choose the display language for this device.',
@@ -100,6 +102,9 @@ export const translations = {
       'Install a version with the bundled uv runner, then select the runner used by automations.',
     'settings.pythonVersion': 'Python version',
     'settings.runners': 'Runners',
+    'settings.resetLocalStorage': 'Reset local storage',
+    'settings.resetLocalStorageDescription':
+      'Clear local preferences and return to onboarding. Automation data is preserved.',
     'settings.settings': 'Settings',
     'settings.settingsDescription': 'Manage the runtimes available to automations.',
     'settings.settingsSections': 'Settings sections',
@@ -236,6 +241,9 @@ export const translations = {
     'runner.useSystemPython': 'Usar Python do sistema',
     'settings.appearance': 'Aparência',
     'settings.appearanceDescription': 'Escolha como o EVA Labs aparece neste dispositivo.',
+    'settings.development': 'Desenvolvimento',
+    'settings.developmentDescription':
+      'Ferramentas disponíveis apenas durante o desenvolvimento do EVA Labs.',
     'settings.general': 'Geral',
     'settings.language': 'Idioma',
     'settings.languageDescription': 'Escolha o idioma de exibição para este dispositivo.',
@@ -244,6 +252,9 @@ export const translations = {
       'Instale uma versão com o executor uv integrado e selecione o executor usado pelas automações.',
     'settings.pythonVersion': 'Versão do Python',
     'settings.runners': 'Executores',
+    'settings.resetLocalStorage': 'Redefinir armazenamento local',
+    'settings.resetLocalStorageDescription':
+      'Limpe as preferências locais e volte ao onboarding. Os dados das automações serão preservados.',
     'settings.settings': 'Configurações',
     'settings.settingsDescription': 'Gerencie os runtimes disponíveis para as automações.',
     'settings.settingsSections': 'Seções de configurações',
