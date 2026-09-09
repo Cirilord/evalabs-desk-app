@@ -1,8 +1,10 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { invoke } from '@tauri-apps/api/core';
 import { open as openFileDialog } from '@tauri-apps/plugin-dialog';
 import { CheckIcon, ChevronDownIcon, FileIcon, PlusIcon, Trash2Icon } from 'lucide-react';
 import { Checkbox, Select } from 'radix-ui';
+import { useEffect } from 'react';
 import { Controller, useFieldArray, useForm, useWatch } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
@@ -18,7 +20,11 @@ import sqlite from '@/data/sqlite';
 import { GenerateScriptPromptDialog } from './components/GenerateScriptPromptDialog';
 import { LibraryCombobox } from './components/LibraryCombobox';
 import { createAutomationSchema } from './schema';
-import type { CreateAutomationForm, CreateAutomationScreenProps } from './types';
+import type {
+  CreateAutomationForm,
+  CreateAutomationScreenProps,
+  SavedAutomationScript,
+} from './types';
 
 export function CreateAutomationScreen(props: CreateAutomationScreenProps) {
   const { automation } = props;
@@ -27,10 +33,31 @@ export function CreateAutomationScreen(props: CreateAutomationScreenProps) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const saveAutomation = useMutation({
-    mutationFn: (data: CreateAutomationForm) =>
-      automation
-        ? sqlite.automation.update({ where: { id: automation.id }, data })
-        : sqlite.automation.create({ data }),
+    mutationFn: async (data: CreateAutomationForm) => {
+      const automationId = automation?.id ?? crypto.randomUUID();
+      const savedScript = await invoke<SavedAutomationScript>('save_automation_script', {
+        automationId,
+        script: data.script,
+        scriptMode: data.scriptMode,
+        scriptPath: data.scriptPath,
+        scriptFileMode: data.scriptFileMode,
+      });
+      const automationData = {
+        id: automationId,
+        name: data.name,
+        description: data.description,
+        script: data.script,
+        scriptSource: savedScript.scriptSource,
+        scriptPath: savedScript.scriptPath,
+        libraries: data.libraries,
+        inputs: data.inputs,
+        outputs: data.outputs,
+      };
+
+      return automation
+        ? sqlite.automation.update({ where: { id: automation.id }, data: automationData })
+        : sqlite.automation.create({ data: automationData });
+    },
   });
   const {
     formState: { errors, isSubmitting },
@@ -39,12 +66,20 @@ export function CreateAutomationScreen(props: CreateAutomationScreenProps) {
     handleSubmit,
     register,
     setError,
+    setValue,
   } = useForm<CreateAutomationForm>({
     defaultValues: {
       name: automation?.name ?? '',
       description: automation?.description ?? '',
       script: automation?.script ?? '',
-      scriptSource: automation?.scriptSource ?? 'inline',
+      scriptMode:
+        automation?.scriptSource === 'external' || automation?.scriptSource === 'file'
+          ? 'file'
+          : 'inline',
+      scriptFileMode:
+        automation?.scriptSource === 'external' || automation?.scriptSource === 'file'
+          ? 'external'
+          : 'clone',
       scriptPath: automation?.scriptPath ?? null,
       libraries: automation?.libraries ?? [],
       inputs: automation?.inputs ?? [],
@@ -64,7 +99,17 @@ export function CreateAutomationScreen(props: CreateAutomationScreenProps) {
     control,
     name: 'outputs',
   });
-  const scriptSource = useWatch({ control, name: 'scriptSource' });
+  const scriptMode = useWatch({ control, name: 'scriptMode' });
+
+  useEffect(() => {
+    if (automation?.scriptSource !== 'managed') {
+      return;
+    }
+
+    void invoke<string>('read_managed_automation_script', { automationId: automation.id }).then(
+      (script) => setValue('script', script)
+    );
+  }, [automation, setValue]);
 
   async function onSubmit(data: CreateAutomationForm) {
     try {
@@ -439,7 +484,7 @@ export function CreateAutomationScreen(props: CreateAutomationScreenProps) {
             <Label>{t('create.scriptSource')}</Label>
             <Controller
               control={control}
-              name="scriptSource"
+              name="scriptMode"
               render={({ field }) => (
                 <Select.Root value={field.value} onValueChange={field.onChange}>
                   <Select.Trigger
@@ -479,7 +524,7 @@ export function CreateAutomationScreen(props: CreateAutomationScreenProps) {
             />
           </div>
 
-          {scriptSource === 'inline' ? (
+          {scriptMode === 'inline' ? (
             <div className="space-y-2">
               <Label>{t('create.script')}</Label>
               <p className="text-sm text-muted-foreground">{t('create.scriptHint')}</p>
@@ -532,6 +577,56 @@ export function CreateAutomationScreen(props: CreateAutomationScreenProps) {
                     </Button>
                   </div>
                   <p className="text-sm text-muted-foreground">{t('create.scriptFileHint')}</p>
+                  <Controller
+                    control={control}
+                    name="scriptFileMode"
+                    render={({ field: fileModeField }) => (
+                      <div className="space-y-2">
+                        <Label>{t('create.scriptFileMode')}</Label>
+                        <Select.Root
+                          value={fileModeField.value}
+                          onValueChange={fileModeField.onChange}
+                        >
+                          <Select.Trigger className="flex h-9 w-full items-center justify-between rounded-md border bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50">
+                            <Select.Value />
+                            <Select.Icon asChild>
+                              <ChevronDownIcon />
+                            </Select.Icon>
+                          </Select.Trigger>
+                          <Select.Portal>
+                            <Select.Content
+                              className="overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md"
+                              position="popper"
+                            >
+                              <Select.Viewport className="p-1">
+                                <Select.Item
+                                  className="cursor-default rounded-sm px-2 py-1.5 text-sm outline-none data-highlighted:bg-accent"
+                                  value="clone"
+                                >
+                                  <Select.ItemText>
+                                    {t('create.scriptFileModeClone')}
+                                  </Select.ItemText>
+                                </Select.Item>
+                                <Select.Item
+                                  className="cursor-default rounded-sm px-2 py-1.5 text-sm outline-none data-highlighted:bg-accent"
+                                  value="external"
+                                >
+                                  <Select.ItemText>
+                                    {t('create.scriptFileModeExternal')}
+                                  </Select.ItemText>
+                                </Select.Item>
+                              </Select.Viewport>
+                            </Select.Content>
+                          </Select.Portal>
+                        </Select.Root>
+                        <p className="text-sm text-muted-foreground">
+                          {t(
+                            `create.scriptFileMode${fileModeField.value === 'clone' ? 'CloneHint' : 'ExternalHint'}`
+                          )}
+                        </p>
+                      </div>
+                    )}
+                  />
                   {errors.scriptPath ? (
                     <p className="text-sm text-destructive">{errors.scriptPath.message}</p>
                   ) : null}

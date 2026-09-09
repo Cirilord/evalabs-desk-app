@@ -48,12 +48,16 @@ export const translations = {
     'create.scriptSource': 'Script source',
     'create.scriptSourceFile': 'Choose Python file',
     'create.scriptSourceInline': 'Write script',
+    'create.scriptFileMode': 'File handling',
+    'create.scriptFileModeClone': 'Clone into this automation',
+    'create.scriptFileModeCloneHint': 'A managed copy will be saved with this automation.',
+    'create.scriptFileModeExternal': 'Use original file',
+    'create.scriptFileModeExternalHint': 'The latest original file will be copied for each run.',
     'create.startDescription':
       'Start with a name, a short description, and the script that runs the automation.',
     'create.choosePythonFile': 'Choose Python file',
     'create.noPythonFile': 'No Python file selected',
-    'create.scriptFileHint':
-      'The current version of this file is used every time the automation runs.',
+    'create.scriptFileHint': 'Choose whether to clone the file or keep using its original version.',
     'create.scriptHint':
       'Define process(inputs). It receives a dictionary and must return a dictionary with the configured outputs. Use print for logs; input() is not supported.',
     'create.saving': 'Saving...',
@@ -92,12 +96,15 @@ export const translations = {
     'runner.useSystemPython': 'Use system Python',
     'settings.appearance': 'Appearance',
     'settings.appearanceDescription': 'Choose how EVA Labs appears on this device.',
+    'settings.codeEditor': 'Code editor',
+    'settings.codeEditorDescription': 'Choose the app used to edit automation scripts.',
     'settings.development': 'Development',
     'settings.developmentDescription': 'Tools available only while developing EVA Labs.',
     'settings.general': 'General',
     'settings.language': 'Language',
     'settings.languageDescription': 'Choose the display language for this device.',
     'settings.python': 'Python',
+    'settings.notInstalled': 'not installed',
     'settings.pythonDescription':
       'Install a version with the bundled uv runner, then select the runner used by automations.',
     'settings.pythonVersion': 'Python version',
@@ -109,6 +116,7 @@ export const translations = {
     'settings.settingsDescription': 'Manage the runtimes available to automations.',
     'settings.settingsSections': 'Settings sections',
     'settings.systemPython': 'System Python',
+    'settings.systemCodeEditor': 'System default',
     'settings.systemPythonNotFound': 'System Python was not found',
     'settings.telemetry': 'Usage telemetry',
     'settings.telemetryDescription':
@@ -131,6 +139,7 @@ export const translations = {
     'runs.deleting': 'Deleting...',
     'runs.details': 'Run details',
     'runs.detailsDescription': 'Execution information, inputs, and logs.',
+    'runs.editScript': 'Edit script',
     'runs.error': 'Error',
     'runs.inputs': 'Inputs',
     'runs.logs': 'Logs',
@@ -196,12 +205,18 @@ export const translations = {
     'create.scriptSource': 'Fonte do script',
     'create.scriptSourceFile': 'Escolher arquivo Python',
     'create.scriptSourceInline': 'Escrever script',
+    'create.scriptFileMode': 'Como usar o arquivo',
+    'create.scriptFileModeClone': 'Clonar para esta automação',
+    'create.scriptFileModeCloneHint': 'Uma cópia gerenciada será salva com esta automação.',
+    'create.scriptFileModeExternal': 'Usar arquivo original',
+    'create.scriptFileModeExternalHint':
+      'A versão atual do arquivo original será copiada a cada execução.',
     'create.startDescription':
       'Comece com um nome, uma breve descrição e o script que executa a automação.',
     'create.choosePythonFile': 'Escolher arquivo Python',
     'create.noPythonFile': 'Nenhum arquivo Python selecionado',
     'create.scriptFileHint':
-      'A versão atual deste arquivo é usada sempre que a automação é executada.',
+      'Escolha se deseja clonar o arquivo ou continuar usando sua versão original.',
     'create.scriptHint':
       'Defina process(inputs). Ela recebe um dicionário e deve retornar um dicionário com as saídas configuradas. Use print para logs; input() não é suportado.',
     'create.saving': 'Salvando...',
@@ -241,6 +256,8 @@ export const translations = {
     'runner.useSystemPython': 'Usar Python do sistema',
     'settings.appearance': 'Aparência',
     'settings.appearanceDescription': 'Escolha como o EVA Labs aparece neste dispositivo.',
+    'settings.codeEditor': 'Editor de código',
+    'settings.codeEditorDescription': 'Escolha o app usado para editar scripts das automações.',
     'settings.development': 'Desenvolvimento',
     'settings.developmentDescription':
       'Ferramentas disponíveis apenas durante o desenvolvimento do EVA Labs.',
@@ -248,6 +265,7 @@ export const translations = {
     'settings.language': 'Idioma',
     'settings.languageDescription': 'Escolha o idioma de exibição para este dispositivo.',
     'settings.python': 'Python',
+    'settings.notInstalled': 'não instalado',
     'settings.pythonDescription':
       'Instale uma versão com o executor uv integrado e selecione o executor usado pelas automações.',
     'settings.pythonVersion': 'Versão do Python',
@@ -259,6 +277,7 @@ export const translations = {
     'settings.settingsDescription': 'Gerencie os runtimes disponíveis para as automações.',
     'settings.settingsSections': 'Seções de configurações',
     'settings.systemPython': 'Python do sistema',
+    'settings.systemCodeEditor': 'Padrão do sistema',
     'settings.systemPythonNotFound': 'Python do sistema não foi encontrado',
     'settings.telemetry': 'Telemetria de uso',
     'settings.telemetryDescription':
@@ -281,6 +300,7 @@ export const translations = {
     'runs.deleting': 'Excluindo...',
     'runs.details': 'Detalhes da execução',
     'runs.detailsDescription': 'Informações da execução, entradas e logs.',
+    'runs.editScript': 'Editar script',
     'runs.error': 'Erro',
     'runs.inputs': 'Entradas',
     'runs.logs': 'Logs',

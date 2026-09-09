@@ -28,14 +28,15 @@ export const createAutomationSchema = z
       .max(100, 'Name must contain at most 100 characters.'),
     description: z.string().trim().max(500, 'Description must contain at most 500 characters.'),
     script: z.string(),
-    scriptSource: z.enum(['inline', 'file']),
+    scriptMode: z.enum(['inline', 'file']),
+    scriptFileMode: z.enum(['clone', 'external']),
     scriptPath: z.string().nullable(),
     libraries: z.array(automationLibrarySchema).max(50),
     inputs: z.array(automationInputSchema),
     outputs: z.array(automationOutputSchema),
   })
   .superRefine((automation, context) => {
-    if (automation.scriptSource === 'file') {
+    if (automation.scriptMode === 'file') {
       if (!automation.scriptPath?.trim()) {
         context.addIssue({
           code: 'custom',

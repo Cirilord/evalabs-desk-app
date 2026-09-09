@@ -16,13 +16,16 @@ import { useTheme } from '@/components/shared/ThemeProvider/use-theme';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { queryKeys } from '@/data/queryKeys';
+import { getCodeEditorPreference, storeCodeEditorPreference } from '@/lib/code-editor';
+import type { CodeEditorPreference } from '@/lib/code-editor';
 
-import type { PythonInterpreter, PythonRunner, SettingsModalProps } from './types';
+import type { CodeEditor, PythonInterpreter, PythonRunner, SettingsModalProps } from './types';
 
 export function SettingsModal(props: SettingsModalProps) {
   const { trigger } = props;
   const [open, setOpen] = useState(false);
   const [selectedRunnerVersion, setSelectedRunnerVersion] = useState<string | null>(null);
+  const [codeEditor, setCodeEditor] = useState<CodeEditorPreference>(getCodeEditorPreference);
   const { i18n, t } = useTranslation();
   const locale = i18n.resolvedLanguage ?? i18n.language;
   const { setTelemetry, telemetry } = useTelemetry();
@@ -31,6 +34,11 @@ export function SettingsModal(props: SettingsModalProps) {
   const { data: interpreter } = useQuery({
     queryKey: queryKeys.pythonInterpreter,
     queryFn: () => invoke<PythonInterpreter | null>('detect_python_interpreter'),
+    enabled: open,
+  });
+  const { data: codeEditors = [] } = useQuery({
+    queryKey: ['code-editors'],
+    queryFn: () => invoke<CodeEditor[]>('list_code_editors'),
     enabled: open,
   });
   const {
@@ -71,6 +79,16 @@ export function SettingsModal(props: SettingsModalProps) {
     window.localStorage.clear();
     window.location.reload();
   }
+
+  function selectCodeEditor(editor: CodeEditorPreference) {
+    storeCodeEditorPreference(editor);
+    setCodeEditor(editor);
+  }
+
+  const selectedCodeEditor =
+    codeEditor === 'system' || codeEditors.some((editor) => editor.id === codeEditor)
+      ? codeEditor
+      : 'system';
 
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
@@ -129,7 +147,7 @@ export function SettingsModal(props: SettingsModalProps) {
                       className="z-[60] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md"
                       position="popper"
                     >
-                      <Select.Viewport className="p-1">
+                      <Select.Viewport className="max-h-64 overflow-y-auto p-1">
                         <Select.Group>
                           <Select.Item
                             className="cursor-default rounded-sm px-2 py-1.5 text-sm outline-none data-highlighted:bg-accent"
@@ -182,7 +200,7 @@ export function SettingsModal(props: SettingsModalProps) {
                       className="z-[60] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md"
                       position="popper"
                     >
-                      <Select.Viewport className="p-1">
+                      <Select.Viewport className="max-h-64 overflow-y-auto p-1">
                         <Select.Item
                           className="cursor-default rounded-sm px-2 py-1.5 text-sm outline-none data-highlighted:bg-accent"
                           value="en-US"
@@ -195,6 +213,54 @@ export function SettingsModal(props: SettingsModalProps) {
                         >
                           <Select.ItemText>{t('language.portuguese')}</Select.ItemText>
                         </Select.Item>
+                      </Select.Viewport>
+                    </Select.Content>
+                  </Select.Portal>
+                </Select.Root>
+              </div>
+
+              <div className="mt-5 flex items-center justify-between gap-4 border-t pt-5">
+                <div>
+                  <h2 className="font-medium">{t('settings.codeEditor')}</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {t('settings.codeEditorDescription')}
+                  </p>
+                </div>
+                <Select.Root
+                  value={selectedCodeEditor}
+                  onValueChange={(value) =>
+                    value === 'system' || codeEditors.some((editor) => editor.id === value)
+                      ? selectCodeEditor(value as CodeEditorPreference)
+                      : undefined
+                  }
+                >
+                  <Select.Trigger className="flex h-9 w-44 shrink-0 items-center justify-between rounded-md border bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50">
+                    <Select.Value />
+                    <Select.Icon asChild>
+                      <ChevronDownIcon />
+                    </Select.Icon>
+                  </Select.Trigger>
+                  <Select.Portal>
+                    <Select.Content
+                      className="z-[60] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md"
+                      position="popper"
+                    >
+                      <Select.Viewport className="max-h-64 overflow-y-auto p-1">
+                        <Select.Item
+                          className="cursor-default rounded-sm px-2 py-1.5 text-sm outline-none data-highlighted:bg-accent"
+                          value="system"
+                        >
+                          <Select.ItemText>{t('settings.systemCodeEditor')}</Select.ItemText>
+                        </Select.Item>
+                        {codeEditors.map((editor) => (
+                          <Select.Item
+                            key={editor.id}
+                            className="cursor-default rounded-sm px-2 py-1.5 text-sm outline-none data-highlighted:bg-accent"
+                            value={editor.id}
+                          >
+                            <Select.ItemText>{editor.name}</Select.ItemText>
+                          </Select.Item>
+                        ))}
                       </Select.Viewport>
                     </Select.Content>
                   </Select.Portal>

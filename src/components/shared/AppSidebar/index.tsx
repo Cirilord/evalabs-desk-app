@@ -75,13 +75,22 @@ export function AppSidebar(props: AppSidebarProps) {
   async function cloneAutomation(automation: $AutomationPayload) {
     const suffix = ' copy';
     const name = `${automation.name.slice(0, 100 - suffix.length).trimEnd()}${suffix}`;
+    const id = crypto.randomUUID();
+    const scriptPath =
+      automation.scriptSource === 'managed'
+        ? await invoke<string>('clone_managed_automation_script', {
+            sourceAutomationId: automation.id,
+            targetAutomationId: id,
+          })
+        : automation.scriptPath;
     const clonedAutomation = await sqlite.automation.create({
       data: {
+        id,
         name,
         description: automation.description,
         script: automation.script,
         scriptSource: automation.scriptSource,
-        scriptPath: automation.scriptPath,
+        scriptPath,
         libraries: automation.libraries,
         inputs: automation.inputs,
         outputs: automation.outputs,

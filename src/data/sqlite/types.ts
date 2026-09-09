@@ -30,7 +30,8 @@ export type AutomationInput = {
 
 export type AutomationInputType = 'text' | 'file' | 'number' | 'boolean';
 
-export type AutomationScriptSource = 'inline' | 'file';
+// inline and file are kept to run automations created by earlier app versions.
+export type AutomationScriptSource = 'inline' | 'file' | 'managed' | 'external';
 
 export type AutomationLibrary = {
   name: string;
@@ -48,6 +49,7 @@ export type AutomationCreateArgs = {
 };
 
 export type AutomationCreateInput = {
+  id?: string;
   name: string;
   description: string;
   script: string;

@@ -54,6 +54,154 @@ struct PythonRunner {
     active: bool,
 }
 
+#[derive(Serialize)]
+struct CodeEditor {
+    id: &'static str,
+    name: &'static str,
+    installed: bool,
+}
+
+#[cfg(target_os = "macos")]
+fn macos_application_is_installed(application: &str) -> bool {
+    let home_application = std::env::var_os("HOME")
+        .map(PathBuf::from)
+        .map(|home| home.join("Applications").join(format!("{application}.app")));
+
+    [
+        PathBuf::from("/Applications").join(format!("{application}.app")),
+        PathBuf::from("/System/Applications").join(format!("{application}.app")),
+    ]
+    .into_iter()
+    .chain(home_application)
+    .any(|path| path.exists())
+}
+
+#[cfg(target_os = "macos")]
+fn code_editor_entries() -> Vec<CodeEditor> {
+    [
+        ("vscode", "Visual Studio Code", "Visual Studio Code"),
+        ("cursor", "Cursor", "Cursor"),
+        ("zed", "Zed", "Zed"),
+        ("codium", "VSCodium", "VSCodium"),
+        ("windsurf", "Windsurf", "Windsurf"),
+        ("pycharm", "PyCharm", "PyCharm"),
+        ("intellij", "IntelliJ IDEA", "IntelliJ IDEA"),
+        ("sublime", "Sublime Text", "Sublime Text"),
+        ("nova", "Nova", "Nova"),
+        ("bbedit", "BBEdit", "BBEdit"),
+        ("coteditor", "CotEditor", "CotEditor"),
+        ("textmate", "TextMate", "TextMate"),
+        ("fleet", "JetBrains Fleet", "Fleet"),
+        ("androidstudio", "Android Studio", "Android Studio"),
+        ("xcode", "Xcode", "Xcode"),
+        ("textedit", "TextEdit", "TextEdit"),
+    ]
+    .into_iter()
+    .map(|(id, name, application)| CodeEditor {
+        id,
+        name,
+        installed: macos_application_is_installed(application),
+    })
+    .collect()
+}
+
+#[cfg(target_os = "macos")]
+fn macos_terminal_editor_entries() -> Vec<CodeEditor> {
+    [
+        ("vim", "Vim", "vim"),
+        ("neovim", "Neovim", "nvim"),
+        ("nano", "Nano", "nano"),
+    ]
+    .into_iter()
+    .map(|(id, name, command)| CodeEditor {
+        id,
+        name,
+        installed: background_command("which")
+            .arg(command)
+            .output()
+            .map(|output| output.status.success())
+            .unwrap_or(false),
+    })
+    .collect()
+}
+
+#[cfg(windows)]
+fn code_editor_entries() -> Vec<CodeEditor> {
+    [
+        ("vscode", "Visual Studio Code", "code"),
+        ("cursor", "Cursor", "cursor"),
+        ("zed", "Zed", "zed"),
+        ("codium", "VSCodium", "codium"),
+        ("windsurf", "Windsurf", "windsurf"),
+        ("pycharm", "PyCharm", "pycharm"),
+        ("intellij", "IntelliJ IDEA", "idea"),
+        ("sublime", "Sublime Text", "subl"),
+        ("androidstudio", "Android Studio", "studio"),
+        ("notepadpp", "Notepad++", "notepad++"),
+        ("vim", "Vim", "vim"),
+        ("neovim", "Neovim", "nvim"),
+        ("nano", "Nano", "nano"),
+        ("notepad", "Notepad", "notepad"),
+    ]
+    .into_iter()
+    .map(|(id, name, command)| CodeEditor {
+        id,
+        name,
+        installed: command == "notepad"
+            || background_command("where")
+                .arg(command)
+                .output()
+                .map(|output| output.status.success())
+                .unwrap_or(false),
+    })
+    .collect()
+}
+
+#[cfg(all(not(target_os = "macos"), not(windows)))]
+fn code_editor_entries() -> Vec<CodeEditor> {
+    [
+        ("vscode", "Visual Studio Code", "code"),
+        ("cursor", "Cursor", "cursor"),
+        ("zed", "Zed", "zed"),
+        ("codium", "VSCodium", "codium"),
+        ("windsurf", "Windsurf", "windsurf"),
+        ("pycharm", "PyCharm", "pycharm"),
+        ("intellij", "IntelliJ IDEA", "idea"),
+        ("sublime", "Sublime Text", "subl"),
+        ("androidstudio", "Android Studio", "studio"),
+        ("kate", "Kate", "kate"),
+        ("geany", "Geany", "geany"),
+        ("gedit", "Gedit", "gedit"),
+        ("vim", "Vim", "vim"),
+        ("neovim", "Neovim", "nvim"),
+        ("nano", "Nano", "nano"),
+    ]
+    .into_iter()
+    .map(|(id, name, command)| CodeEditor {
+        id,
+        name,
+        installed: background_command("which")
+            .arg(command)
+            .output()
+            .map(|output| output.status.success())
+            .unwrap_or(false),
+    })
+    .collect()
+}
+
+#[tauri::command]
+fn list_code_editors() -> Vec<CodeEditor> {
+    let mut editors = code_editor_entries();
+
+    #[cfg(target_os = "macos")]
+    editors.extend(macos_terminal_editor_entries());
+
+    editors
+        .into_iter()
+        .filter(|editor| editor.installed)
+        .collect()
+}
+
 #[derive(Default, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct RunnerConfiguration {
@@ -85,6 +233,13 @@ struct AutomationLibrary {
 #[derive(Serialize)]
 struct StartedRun {
     id: String,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct SavedAutomationScript {
+    script_source: String,
+    script_path: String,
 }
 
 #[derive(Clone, Serialize)]
@@ -358,7 +513,7 @@ fn detect_runner_version(python_executable: &str) -> Result<String, String> {
     Ok(version)
 }
 
-fn automation_environment_path(app: &AppHandle, automation_id: &str) -> Result<PathBuf, String> {
+fn automation_directory_path(app: &AppHandle, automation_id: &str) -> Result<PathBuf, String> {
     if automation_id.is_empty()
         || !automation_id
             .chars()
@@ -371,18 +526,47 @@ fn automation_environment_path(app: &AppHandle, automation_id: &str) -> Result<P
         .path()
         .app_data_dir()
         .map_err(|error| error.to_string())?
+        .join("automations")
+        .join(automation_id))
+}
+
+fn automation_environment_path(app: &AppHandle, automation_id: &str) -> Result<PathBuf, String> {
+    Ok(automation_directory_path(app, automation_id)?.join(".venv"))
+}
+
+fn legacy_automation_environment_path(
+    app: &AppHandle,
+    automation_id: &str,
+) -> Result<PathBuf, String> {
+    Ok(app
+        .path()
+        .app_data_dir()
+        .map_err(|error| error.to_string())?
         .join("automation-environments")
         .join(automation_id))
 }
 
+fn managed_automation_script_path(app: &AppHandle, automation_id: &str) -> Result<PathBuf, String> {
+    Ok(automation_directory_path(app, automation_id)?.join("script.py"))
+}
+
 #[tauri::command]
 fn delete_automation_environment(app: AppHandle, automation_id: String) -> Result<(), String> {
-    let environment_path = automation_environment_path(&app, &automation_id)?;
+    let automation_path = automation_directory_path(&app, &automation_id)?;
+    let legacy_environment_path = legacy_automation_environment_path(&app, &automation_id)?;
 
-    match fs::remove_dir_all(environment_path) {
+    match fs::remove_dir_all(automation_path) {
+        Ok(()) => {}
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+        Err(error) => return Err(format!("Failed to remove automation files: {error}")),
+    }
+
+    match fs::remove_dir_all(legacy_environment_path) {
         Ok(()) => Ok(()),
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
-        Err(error) => Err(format!("Failed to remove automation environment: {error}")),
+        Err(error) => Err(format!(
+            "Failed to remove legacy automation environment: {error}"
+        )),
     }
 }
 
@@ -465,10 +649,11 @@ fn prepare_automation_environment(
     }
 
     if !environment_python.exists() {
-        let environments_path = environment_path
+        let automations_path = environment_path
             .parent()
-            .ok_or_else(|| "Failed to locate automation environments directory.".to_owned())?;
-        fs::create_dir_all(environments_path)
+            .and_then(Path::parent)
+            .ok_or_else(|| "Failed to locate automations directory.".to_owned())?;
+        fs::create_dir_all(automations_path)
             .map_err(|error| format!("Failed to prepare automation environment: {error}"))?;
 
         let output = tauri::async_runtime::block_on(run_uv(
@@ -504,8 +689,11 @@ fn prepare_automation_environment(
     requirements.sort_unstable();
     requirements.dedup();
 
-    let requirements_input_path = environment_path.join("requirements.in");
-    let requirements_path = environment_path.join("requirements.txt");
+    let automation_path = automation_directory_path(app, automation_id)?;
+    fs::create_dir_all(&automation_path)
+        .map_err(|error| format!("Failed to prepare automation directory: {error}"))?;
+    let requirements_input_path = automation_path.join("requirements.in");
+    let requirements_path = automation_path.join("requirements.txt");
     fs::write(&requirements_input_path, requirements.join("\n"))
         .map_err(|error| format!("Failed to write automation requirements: {error}"))?;
 
@@ -556,8 +744,7 @@ fn prepare_automation_environment(
 
 fn execute_python_script(
     python_executable: String,
-    inline_script: Option<String>,
-    script_path: Option<PathBuf>,
+    automation_script: String,
     inputs: Value,
 ) -> Result<PythonExecution, String> {
     let inputs = serde_json::to_string(&inputs).map_err(|error| error.to_string())?;
@@ -565,15 +752,9 @@ fn execute_python_script(
     let runner_path = run_directory.path.join("main.py");
     let outputs_path = run_directory.path.join("outputs.json");
 
-    let automation_path = match inline_script {
-        Some(script) => {
-            let automation_path = run_directory.path.join("automation.py");
-            fs::write(&automation_path, script)
-                .map_err(|error| format!("Failed to write automation script: {error}"))?;
-            automation_path
-        }
-        None => script_path.ok_or_else(|| "A Python script path is required.".to_owned())?,
-    };
+    let automation_path = run_directory.path.join("automation.py");
+    fs::write(&automation_path, automation_script)
+        .map_err(|error| format!("Failed to write automation script: {error}"))?;
 
     fs::write(&runner_path, PYTHON_RUNNER)
         .map_err(|error| format!("Failed to prepare Python runner: {error}"))?;
@@ -618,6 +799,249 @@ fn execute_python_script(
         logs,
         error,
     })
+}
+
+fn read_automation_script(
+    app: &AppHandle,
+    automation_id: &str,
+    script: String,
+    script_source: &str,
+    script_path: Option<String>,
+) -> Result<String, String> {
+    match script_source {
+        "inline" => Ok(script),
+        "managed" => fs::read_to_string(managed_automation_script_path(app, automation_id)?)
+            .map_err(|error| format!("Failed to read managed Python script: {error}")),
+        "file" | "external" => {
+            let path = script_path.ok_or_else(|| "A Python script path is required.".to_owned())?;
+            let path = fs::canonicalize(path)
+                .map_err(|error| format!("Failed to access Python script: {error}"))?;
+            fs::read_to_string(path)
+                .map_err(|error| format!("Failed to read Python script: {error}"))
+        }
+        _ => Err("Unsupported script source.".to_owned()),
+    }
+}
+
+#[tauri::command]
+fn save_automation_script(
+    app: AppHandle,
+    automation_id: String,
+    script: String,
+    script_mode: String,
+    script_path: Option<String>,
+    script_file_mode: String,
+) -> Result<SavedAutomationScript, String> {
+    if script_mode == "file" && script_file_mode == "external" {
+        let path = script_path.ok_or_else(|| "A Python script path is required.".to_owned())?;
+        let path = fs::canonicalize(path)
+            .map_err(|error| format!("Failed to access Python script: {error}"))?;
+
+        return Ok(SavedAutomationScript {
+            script_source: "external".to_owned(),
+            script_path: path.to_string_lossy().into_owned(),
+        });
+    }
+
+    let managed_path = managed_automation_script_path(&app, &automation_id)?;
+    let managed_directory = managed_path
+        .parent()
+        .ok_or_else(|| "Failed to locate automation directory.".to_owned())?;
+    fs::create_dir_all(managed_directory)
+        .map_err(|error| format!("Failed to prepare automation directory: {error}"))?;
+
+    match script_mode.as_str() {
+        "inline" => fs::write(&managed_path, script)
+            .map_err(|error| format!("Failed to save automation script: {error}"))?,
+        "file" if script_file_mode == "clone" => {
+            let source_path =
+                script_path.ok_or_else(|| "A Python script path is required.".to_owned())?;
+            fs::copy(source_path, &managed_path)
+                .map_err(|error| format!("Failed to clone Python script: {error}"))?;
+        }
+        _ => return Err("Unsupported script configuration.".to_owned()),
+    }
+
+    Ok(SavedAutomationScript {
+        script_source: "managed".to_owned(),
+        script_path: managed_path.to_string_lossy().into_owned(),
+    })
+}
+
+#[tauri::command]
+fn read_managed_automation_script(app: AppHandle, automation_id: String) -> Result<String, String> {
+    fs::read_to_string(managed_automation_script_path(&app, &automation_id)?)
+        .map_err(|error| format!("Failed to read managed Python script: {error}"))
+}
+
+#[tauri::command]
+fn clone_managed_automation_script(
+    app: AppHandle,
+    source_automation_id: String,
+    target_automation_id: String,
+) -> Result<String, String> {
+    let source_path = managed_automation_script_path(&app, &source_automation_id)?;
+    let target_path = managed_automation_script_path(&app, &target_automation_id)?;
+    let target_directory = target_path
+        .parent()
+        .ok_or_else(|| "Failed to locate automation directory.".to_owned())?;
+    fs::create_dir_all(target_directory)
+        .map_err(|error| format!("Failed to prepare automation directory: {error}"))?;
+    fs::copy(source_path, &target_path)
+        .map_err(|error| format!("Failed to clone automation script: {error}"))?;
+
+    Ok(target_path.to_string_lossy().into_owned())
+}
+
+#[cfg(target_os = "macos")]
+fn open_macos_terminal_editor(path: &Path, command: &str) -> Result<(), String> {
+    let path = path.to_string_lossy().replace('\'', "'\\''");
+    let terminal_command = format!("{command} '{path}'");
+    let script = format!(
+        "tell application \"Terminal\" to do script \"{}\"",
+        terminal_command.replace('\\', "\\\\").replace('\"', "\\\"")
+    );
+
+    background_command("osascript")
+        .args(["-e", &script])
+        .output()
+        .map_err(|error| format!("Failed to open Terminal: {error}"))?;
+
+    Ok(())
+}
+
+fn open_with_code_editor(path: &Path, editor_id: &str) -> Result<(), String> {
+    #[cfg(target_os = "macos")]
+    if let Some(command) = match editor_id {
+        "vim" => Some("vim"),
+        "neovim" => Some("nvim"),
+        "nano" => Some("nano"),
+        _ => None,
+    } {
+        return open_macos_terminal_editor(path, command);
+    }
+
+    #[cfg(target_os = "macos")]
+    let application = match editor_id {
+        "vscode" => "Visual Studio Code",
+        "cursor" => "Cursor",
+        "zed" => "Zed",
+        "codium" => "VSCodium",
+        "windsurf" => "Windsurf",
+        "pycharm" => "PyCharm",
+        "intellij" => "IntelliJ IDEA",
+        "sublime" => "Sublime Text",
+        "nova" => "Nova",
+        "bbedit" => "BBEdit",
+        "coteditor" => "CotEditor",
+        "textmate" => "TextMate",
+        "fleet" => "Fleet",
+        "androidstudio" => "Android Studio",
+        "xcode" => "Xcode",
+        "textedit" => "TextEdit",
+        _ => return Err("Unsupported code editor.".to_owned()),
+    };
+
+    #[cfg(target_os = "macos")]
+    let output = background_command("open")
+        .args(["-a", application])
+        .arg(path)
+        .spawn();
+
+    #[cfg(windows)]
+    let command = match editor_id {
+        "vscode" => "code",
+        "cursor" => "cursor",
+        "zed" => "zed",
+        "codium" => "codium",
+        "windsurf" => "windsurf",
+        "pycharm" => "pycharm",
+        "intellij" => "idea",
+        "sublime" => "subl",
+        "androidstudio" => "studio",
+        "notepadpp" => "notepad++",
+        "vim" => "vim",
+        "neovim" => "nvim",
+        "nano" => "nano",
+        "notepad" => "notepad",
+        _ => return Err("Unsupported code editor.".to_owned()),
+    };
+
+    #[cfg(windows)]
+    let output = background_command(command).arg(path).spawn();
+
+    #[cfg(all(not(target_os = "macos"), not(windows)))]
+    let command = match editor_id {
+        "vscode" => "code",
+        "cursor" => "cursor",
+        "zed" => "zed",
+        "codium" => "codium",
+        "windsurf" => "windsurf",
+        "pycharm" => "pycharm",
+        "intellij" => "idea",
+        "sublime" => "subl",
+        "androidstudio" => "studio",
+        "kate" => "kate",
+        "geany" => "geany",
+        "gedit" => "gedit",
+        "vim" => "vim",
+        "neovim" => "nvim",
+        "nano" => "nano",
+        _ => return Err("Unsupported code editor.".to_owned()),
+    };
+
+    #[cfg(all(not(target_os = "macos"), not(windows)))]
+    let output = background_command(command).arg(path).spawn();
+
+    output.map_err(|error| format!("Failed to start code editor: {error}"))?;
+
+    Ok(())
+}
+
+#[tauri::command]
+fn open_automation_script_in_editor(
+    app: AppHandle,
+    automation_id: String,
+    script: String,
+    script_source: String,
+    script_path: Option<String>,
+    code_editor: Option<String>,
+) -> Result<SavedAutomationScript, String> {
+    let saved_script = if script_source == "inline" {
+        save_automation_script(
+            app.clone(),
+            automation_id.clone(),
+            script,
+            "inline".to_owned(),
+            None,
+            "clone".to_owned(),
+        )?
+    } else if script_source == "managed" {
+        SavedAutomationScript {
+            script_source,
+            script_path: managed_automation_script_path(&app, &automation_id)?
+                .to_string_lossy()
+                .into_owned(),
+        }
+    } else if script_source == "file" || script_source == "external" {
+        let path = script_path.ok_or_else(|| "A Python script path is required.".to_owned())?;
+        let path = fs::canonicalize(path)
+            .map_err(|error| format!("Failed to access Python script: {error}"))?;
+        SavedAutomationScript {
+            script_source: "external".to_owned(),
+            script_path: path.to_string_lossy().into_owned(),
+        }
+    } else {
+        return Err("Unsupported script source.".to_owned());
+    };
+
+    match code_editor {
+        Some(editor) => open_with_code_editor(Path::new(&saved_script.script_path), &editor)?,
+        None => tauri_plugin_opener::open_path(&saved_script.script_path, None::<&str>)
+            .map_err(|error| format!("Failed to open automation script: {error}"))?,
+    }
+
+    Ok(saved_script)
 }
 
 fn generate_run_id() -> Result<String, String> {
@@ -752,24 +1176,6 @@ async fn start_automation_run(
     outputs: Vec<AutomationOutput>,
     inputs: Value,
 ) -> Result<StartedRun, String> {
-    let (inline_script, script_path, script_contents) = match script_source.as_str() {
-        "inline" => (Some(script.clone()), None, script),
-        "file" => {
-            let path = script_path.ok_or_else(|| "A Python script path is required.".to_owned())?;
-            let path = fs::canonicalize(path)
-                .map_err(|error| format!("Failed to access Python script: {error}"))?;
-            let contents = fs::read_to_string(&path)
-                .map_err(|error| format!("Failed to read Python script: {error}"))?;
-
-            (None, Some(path), contents)
-        }
-        _ => return Err("Unsupported script source.".to_owned()),
-    };
-
-    if uses_interactive_input(&script_contents) {
-        return Err("input() is not supported. Define an automation input instead.".to_owned());
-    }
-
     let python_executable = resolve_python_executable(&app).await?;
     let runner_version = detect_runner_version(&python_executable)?;
 
@@ -827,13 +1233,26 @@ async fn start_automation_run(
                         },
                     );
 
+                    let execution_app = app.clone();
+                    let execution_automation_id = automation_id.clone();
+
                     match tauri::async_runtime::spawn_blocking(move || {
-                        execute_python_script(
-                            environment_python,
-                            inline_script,
+                        let automation_script = read_automation_script(
+                            &execution_app,
+                            &execution_automation_id,
+                            script,
+                            &script_source,
                             script_path,
-                            inputs,
-                        )
+                        )?;
+
+                        if uses_interactive_input(&automation_script) {
+                            return Err(
+                                "input() is not supported. Define an automation input instead."
+                                    .to_owned(),
+                            );
+                        }
+
+                        execute_python_script(environment_python, automation_script, inputs)
                     })
                     .await
                     {
@@ -915,10 +1334,15 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             detect_python_interpreter,
+            list_code_editors,
             list_python_runners,
             install_python_runner,
             select_python_runner,
             delete_automation_environment,
+            save_automation_script,
+            read_managed_automation_script,
+            clone_managed_automation_script,
+            open_automation_script_in_editor,
             start_automation_run
         ])
         .run(tauri::generate_context!())

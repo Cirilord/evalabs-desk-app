@@ -3,6 +3,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import {
   CopyIcon,
+  FilePenLineIcon,
   InfoIcon,
   LoaderCircleIcon,
   PencilIcon,
@@ -18,6 +19,7 @@ import { Button } from '@/components/ui/button';
 import { queryKeys } from '@/data/queryKeys';
 import sqlite from '@/data/sqlite';
 import type { $AutomationPayload, $RunPayload } from '@/data/sqlite/types';
+import { getCodeEditorPreference } from '@/lib/code-editor';
 
 import { RunAutomationModal } from './components/RunAutomationModal';
 import { RunDetailsModal } from './components/RunDetailsModal';
@@ -94,22 +96,61 @@ export function AutomationRunsScreen() {
     },
   });
   const cloneAutomation = useMutation({
-    mutationFn: (automation: $AutomationPayload) =>
-      sqlite.automation.create({
+    mutationFn: async (automation: $AutomationPayload) => {
+      const id = crypto.randomUUID();
+      const scriptPath =
+        automation.scriptSource === 'managed'
+          ? await invoke<string>('clone_managed_automation_script', {
+              sourceAutomationId: automation.id,
+              targetAutomationId: id,
+            })
+          : automation.scriptPath;
+
+      return sqlite.automation.create({
         data: {
+          id,
           name: getCloneName(automation.name),
           description: automation.description,
           script: automation.script,
           scriptSource: automation.scriptSource,
-          scriptPath: automation.scriptPath,
+          scriptPath,
           libraries: automation.libraries,
           inputs: automation.inputs,
           outputs: automation.outputs,
         },
-      }),
+      });
+    },
     onSuccess: async (clonedAutomation) => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.automations });
       await navigate(`/automations/${clonedAutomation.id}`);
+    },
+  });
+  const openScript = useMutation({
+    mutationFn: async (automation: $AutomationPayload) => {
+      const codeEditor = getCodeEditorPreference();
+      const savedScript = await invoke<{
+        scriptSource: $AutomationPayload['scriptSource'];
+        scriptPath: string;
+      }>('open_automation_script_in_editor', {
+        automationId: automation.id,
+        script: automation.script,
+        scriptSource: automation.scriptSource,
+        scriptPath: automation.scriptPath,
+        codeEditor: codeEditor === 'system' ? null : codeEditor,
+      });
+
+      if (
+        savedScript.scriptSource !== automation.scriptSource ||
+        savedScript.scriptPath !== automation.scriptPath
+      ) {
+        await sqlite.automation.update({
+          where: { id: automation.id },
+          data: { ...automation, ...savedScript },
+        });
+      }
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.automation(automationId ?? '') });
     },
   });
   const runAutomation = useMutation({
@@ -169,6 +210,15 @@ export function AutomationRunsScreen() {
             ) : null}
           </div>
           <div className="flex items-center gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={openScript.isPending}
+              onClick={() => openScript.mutate(automation)}
+            >
+              <FilePenLineIcon data-icon="inline-start" />
+              {t('runs.editScript')}
+            </Button>
             <Button type="button" variant="outline" asChild>
               <Link to={`/automations/${automation.id}/edit`}>
                 <PencilIcon data-icon="inline-start" />
@@ -194,6 +244,14 @@ export function AutomationRunsScreen() {
             </Button>
           </div>
         </header>
+
+        {openScript.error ? (
+          <p className="text-sm text-destructive" role="alert">
+            {openScript.error instanceof Error
+              ? openScript.error.message
+              : String(openScript.error)}
+          </p>
+        ) : null}
 
         <section className="flex flex-col gap-4" aria-labelledby="runs-heading">
           <div>

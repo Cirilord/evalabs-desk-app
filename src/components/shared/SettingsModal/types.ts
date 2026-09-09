@@ -13,6 +13,12 @@ export type PythonRunner = {
   active: boolean;
 };
 
+export type CodeEditor = {
+  id: string;
+  name: string;
+  installed: boolean;
+};
+
 export type SettingsModalProps = {
   trigger: ReactElement;
 };

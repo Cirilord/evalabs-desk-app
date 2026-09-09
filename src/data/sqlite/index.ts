@@ -148,7 +148,7 @@ class SQLiteClient {
         }
 
         const database = await this.db;
-        const id = crypto.randomUUID();
+        const id = data.id ?? crypto.randomUUID();
 
         await database.execute(
           `
