@@ -2,6 +2,7 @@ import { open as openFileDialog } from '@tauri-apps/plugin-dialog';
 import { CheckIcon, FileIcon, LoaderCircleIcon } from 'lucide-react';
 import { Checkbox, Dialog } from 'radix-ui';
 import { Controller, useForm } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,6 +25,7 @@ export function RunAutomationModal({
   onRun,
   open,
 }: RunAutomationModalProps) {
+  const { t } = useTranslation();
   const {
     control,
     handleSubmit,
@@ -51,18 +53,18 @@ export function RunAutomationModal({
         <Dialog.Overlay className="fixed inset-0 z-50 bg-black/50" />
         <Dialog.Content className="fixed left-1/2 top-1/2 z-50 flex max-h-[calc(100svh-2rem)] w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 flex-col rounded-lg border bg-background shadow-lg">
           <div className="shrink-0 border-b px-6 py-5">
-            <Dialog.Title className="text-lg font-semibold">Run {automation.name}</Dialog.Title>
+            <Dialog.Title className="text-lg font-semibold">
+              {t('runs.run')} {automation.name}
+            </Dialog.Title>
             <Dialog.Description className="mt-1 text-sm text-muted-foreground">
-              Provide the inputs required for this automation.
+              {t('runs.runDescription')}
             </Dialog.Description>
           </div>
 
           <form className="flex min-h-0 flex-1 flex-col" onSubmit={handleSubmit(handleRun)}>
             <div className="min-h-0 overflow-y-auto px-6 py-5">
               {automation.inputs.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  This automation does not require inputs.
-                </p>
+                <p className="text-sm text-muted-foreground">{t('runs.runNoInputs')}</p>
               ) : (
                 <div className="flex flex-col gap-5">
                   {automation.inputs.map((input) => {
@@ -114,7 +116,7 @@ export function RunAutomationModal({
                                   id={inputId}
                                   readOnly
                                   value={String(field.value ?? '')}
-                                  placeholder="No file selected"
+                                  placeholder={t('create.noPythonFile')}
                                 />
                                 <Button
                                   type="button"
@@ -125,7 +127,7 @@ export function RunAutomationModal({
                                   }}
                                 >
                                   <FileIcon data-icon="inline-start" />
-                                  Choose file
+                                  {t('common.file')}
                                 </Button>
                               </div>
                               {errors[input.name]?.message ? (
@@ -168,14 +170,14 @@ export function RunAutomationModal({
             <div className="flex shrink-0 justify-end gap-3 border-t px-6 py-4">
               <Dialog.Close asChild>
                 <Button type="button" variant="outline" disabled={isBusy}>
-                  Cancel
+                  {t('common.cancel')}
                 </Button>
               </Dialog.Close>
               <Button type="submit" disabled={isBusy}>
                 {isBusy ? (
                   <LoaderCircleIcon className="animate-spin" data-icon="inline-start" />
                 ) : null}
-                {isBusy ? 'Running...' : 'Run automation'}
+                {isBusy ? t('runs.running') : t('runs.run')}
               </Button>
             </div>
           </form>

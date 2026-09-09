@@ -4,6 +4,7 @@ import { open as openFileDialog } from '@tauri-apps/plugin-dialog';
 import { CheckIcon, ChevronDownIcon, FileIcon, PlusIcon, Trash2Icon } from 'lucide-react';
 import { Checkbox, Select } from 'radix-ui';
 import { Controller, useFieldArray, useForm, useWatch } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
 import { Link, useNavigate } from 'react-router-dom';
 
 import { CodeEditor } from '@/components/shared/CodeEditor';
@@ -21,6 +22,7 @@ import type { CreateAutomationForm, CreateAutomationScreenProps } from './types'
 
 export function CreateAutomationScreen(props: CreateAutomationScreenProps) {
   const { automation } = props;
+  const { t } = useTranslation();
   const isEditing = Boolean(automation);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -83,12 +85,10 @@ export function CreateAutomationScreen(props: CreateAutomationScreenProps) {
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">
-              {isEditing ? 'Edit automation' : 'Create automation'}
+              {isEditing ? t('create.editAutomation') : t('create.createAutomation')}
             </h1>
             <p className="mt-2 text-sm text-muted-foreground">
-              {isEditing
-                ? 'Update the script, inputs, and outputs of this automation.'
-                : 'Start with a name, a short description, and the script that runs the automation.'}
+              {isEditing ? t('create.editDescription') : t('create.startDescription')}
             </p>
           </div>
           <GenerateScriptPromptDialog getAutomation={getValues} />
@@ -96,10 +96,10 @@ export function CreateAutomationScreen(props: CreateAutomationScreenProps) {
 
         <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
           <div className="space-y-2">
-            <Label htmlFor="name">Name</Label>
+            <Label htmlFor="name">{t('create.name')}</Label>
             <Input
               id="name"
-              placeholder="Merge monthly spreadsheets"
+              placeholder={t('create.namePlaceholder')}
               autoComplete="off"
               autoFocus
               aria-describedby="name-error"
@@ -114,10 +114,10 @@ export function CreateAutomationScreen(props: CreateAutomationScreenProps) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
+            <Label htmlFor="description">{t('create.description')}</Label>
             <Textarea
               id="description"
-              placeholder="Describe what this automation does"
+              placeholder={t('create.descriptionPlaceholder')}
               rows={5}
               aria-describedby="description-error"
               aria-invalid={Boolean(errors.description)}
@@ -132,11 +132,8 @@ export function CreateAutomationScreen(props: CreateAutomationScreenProps) {
 
           <section className="flex flex-col gap-2">
             <div>
-              <h2 className="text-base font-medium">Libraries</h2>
-              <p className="text-sm text-muted-foreground">
-                Choose the PyPI packages this automation needs. They are saved with the automation
-                configuration; each package uses the latest release by default.
-              </p>
+              <h2 className="text-base font-medium">{t('create.libraries')}</h2>
+              <p className="text-sm text-muted-foreground">{t('create.librariesDescription')}</p>
             </div>
             <Controller
               control={control}
@@ -153,10 +150,8 @@ export function CreateAutomationScreen(props: CreateAutomationScreenProps) {
           <section className="flex flex-col gap-4">
             <div className="flex items-center justify-between gap-4">
               <div>
-                <h2 className="text-base font-medium">Inputs</h2>
-                <p className="text-sm text-muted-foreground">
-                  Define the values this automation receives when it runs.
-                </p>
+                <h2 className="text-base font-medium">{t('create.inputs')}</h2>
+                <p className="text-sm text-muted-foreground">{t('create.inputsDescription')}</p>
               </div>
               <Button
                 type="button"
@@ -171,13 +166,13 @@ export function CreateAutomationScreen(props: CreateAutomationScreenProps) {
                 }
               >
                 <PlusIcon data-icon="inline-start" />
-                Add input
+                {t('create.addInput')}
               </Button>
             </div>
 
             {fields.length === 0 ? (
               <p className="rounded-md border border-dashed px-4 py-6 text-sm text-muted-foreground">
-                This automation does not require any inputs yet.
+                {t('create.noInputs')}
               </p>
             ) : (
               <div className="flex flex-col gap-4">
@@ -186,7 +181,7 @@ export function CreateAutomationScreen(props: CreateAutomationScreenProps) {
                     <div className="flex items-start justify-between gap-4">
                       <div className="grid flex-1 gap-4 sm:grid-cols-2">
                         <div className="space-y-2">
-                          <Label htmlFor={`input-name-${field.id}`}>Name</Label>
+                          <Label htmlFor={`input-name-${field.id}`}>{t('create.name')}</Label>
                           <Input
                             id={`input-name-${field.id}`}
                             placeholder="file_path"
@@ -201,7 +196,7 @@ export function CreateAutomationScreen(props: CreateAutomationScreenProps) {
                         </div>
 
                         <div className="space-y-2">
-                          <Label>Type</Label>
+                          <Label>{t('create.inputType')}</Label>
                           <Controller
                             control={control}
                             name={`inputs.${index}.type`}
@@ -212,7 +207,7 @@ export function CreateAutomationScreen(props: CreateAutomationScreenProps) {
                               >
                                 <Select.Trigger
                                   className="flex h-9 w-full items-center justify-between rounded-md border bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-                                  aria-label="Input type"
+                                  aria-label={t('create.inputType')}
                                 >
                                   <Select.Value />
                                   <Select.Icon asChild>
@@ -230,25 +225,25 @@ export function CreateAutomationScreen(props: CreateAutomationScreenProps) {
                                           className="cursor-default rounded-sm px-2 py-1.5 text-sm outline-none data-highlighted:bg-accent"
                                           value="text"
                                         >
-                                          <Select.ItemText>Text</Select.ItemText>
+                                          <Select.ItemText>{t('common.text')}</Select.ItemText>
                                         </Select.Item>
                                         <Select.Item
                                           className="cursor-default rounded-sm px-2 py-1.5 text-sm outline-none data-highlighted:bg-accent"
                                           value="file"
                                         >
-                                          <Select.ItemText>File</Select.ItemText>
+                                          <Select.ItemText>{t('common.file')}</Select.ItemText>
                                         </Select.Item>
                                         <Select.Item
                                           className="cursor-default rounded-sm px-2 py-1.5 text-sm outline-none data-highlighted:bg-accent"
                                           value="number"
                                         >
-                                          <Select.ItemText>Number</Select.ItemText>
+                                          <Select.ItemText>{t('common.number')}</Select.ItemText>
                                         </Select.Item>
                                         <Select.Item
                                           className="cursor-default rounded-sm px-2 py-1.5 text-sm outline-none data-highlighted:bg-accent"
                                           value="boolean"
                                         >
-                                          <Select.ItemText>Boolean</Select.ItemText>
+                                          <Select.ItemText>{t('common.boolean')}</Select.ItemText>
                                         </Select.Item>
                                       </Select.Group>
                                     </Select.Viewport>
@@ -260,10 +255,12 @@ export function CreateAutomationScreen(props: CreateAutomationScreenProps) {
                         </div>
 
                         <div className="space-y-2 sm:col-span-2">
-                          <Label htmlFor={`input-description-${field.id}`}>Description</Label>
+                          <Label htmlFor={`input-description-${field.id}`}>
+                            {t('create.description')}
+                          </Label>
                           <Input
                             id={`input-description-${field.id}`}
-                            placeholder="Describe the value this automation needs"
+                            placeholder={t('create.inputDescription')}
                             {...register(`inputs.${index}.description`)}
                           />
                         </div>
@@ -273,7 +270,7 @@ export function CreateAutomationScreen(props: CreateAutomationScreenProps) {
                         type="button"
                         variant="ghost"
                         size="icon"
-                        aria-label="Remove input"
+                        aria-label={`${t('common.remove')} ${t('create.inputs')}`}
                         onClick={() => remove(index)}
                       >
                         <Trash2Icon />
@@ -294,7 +291,7 @@ export function CreateAutomationScreen(props: CreateAutomationScreenProps) {
                               <CheckIcon />
                             </Checkbox.Indicator>
                           </Checkbox.Root>
-                          Required
+                          {t('create.required')}
                         </label>
                       )}
                     />
@@ -307,10 +304,8 @@ export function CreateAutomationScreen(props: CreateAutomationScreenProps) {
           <section className="flex flex-col gap-4">
             <div className="flex items-center justify-between gap-4">
               <div>
-                <h2 className="text-base font-medium">Outputs</h2>
-                <p className="text-sm text-muted-foreground">
-                  Define the results this automation produces when it runs.
-                </p>
+                <h2 className="text-base font-medium">{t('create.outputs')}</h2>
+                <p className="text-sm text-muted-foreground">{t('create.outputsDescription')}</p>
               </div>
               <Button
                 type="button"
@@ -324,13 +319,13 @@ export function CreateAutomationScreen(props: CreateAutomationScreenProps) {
                 }
               >
                 <PlusIcon data-icon="inline-start" />
-                Add output
+                {t('create.addOutput')}
               </Button>
             </div>
 
             {outputFields.length === 0 ? (
               <p className="rounded-md border border-dashed px-4 py-6 text-sm text-muted-foreground">
-                This automation does not define any outputs yet.
+                {t('create.noOutputs')}
               </p>
             ) : (
               <div className="flex flex-col gap-4">
@@ -339,7 +334,7 @@ export function CreateAutomationScreen(props: CreateAutomationScreenProps) {
                     <div className="flex items-start justify-between gap-4">
                       <div className="grid flex-1 gap-4 sm:grid-cols-2">
                         <div className="space-y-2">
-                          <Label htmlFor={`output-name-${field.id}`}>Name</Label>
+                          <Label htmlFor={`output-name-${field.id}`}>{t('create.name')}</Label>
                           <Input
                             id={`output-name-${field.id}`}
                             placeholder="report_file"
@@ -354,7 +349,7 @@ export function CreateAutomationScreen(props: CreateAutomationScreenProps) {
                         </div>
 
                         <div className="space-y-2">
-                          <Label>Type</Label>
+                          <Label>{t('create.outputType')}</Label>
                           <Controller
                             control={control}
                             name={`outputs.${index}.type`}
@@ -365,7 +360,7 @@ export function CreateAutomationScreen(props: CreateAutomationScreenProps) {
                               >
                                 <Select.Trigger
                                   className="flex h-9 w-full items-center justify-between rounded-md border bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-                                  aria-label="Output type"
+                                  aria-label={t('create.outputType')}
                                 >
                                   <Select.Value />
                                   <Select.Icon asChild>
@@ -383,25 +378,25 @@ export function CreateAutomationScreen(props: CreateAutomationScreenProps) {
                                           className="cursor-default rounded-sm px-2 py-1.5 text-sm outline-none data-highlighted:bg-accent"
                                           value="text"
                                         >
-                                          <Select.ItemText>Text</Select.ItemText>
+                                          <Select.ItemText>{t('common.text')}</Select.ItemText>
                                         </Select.Item>
                                         <Select.Item
                                           className="cursor-default rounded-sm px-2 py-1.5 text-sm outline-none data-highlighted:bg-accent"
                                           value="file"
                                         >
-                                          <Select.ItemText>File</Select.ItemText>
+                                          <Select.ItemText>{t('common.file')}</Select.ItemText>
                                         </Select.Item>
                                         <Select.Item
                                           className="cursor-default rounded-sm px-2 py-1.5 text-sm outline-none data-highlighted:bg-accent"
                                           value="number"
                                         >
-                                          <Select.ItemText>Number</Select.ItemText>
+                                          <Select.ItemText>{t('common.number')}</Select.ItemText>
                                         </Select.Item>
                                         <Select.Item
                                           className="cursor-default rounded-sm px-2 py-1.5 text-sm outline-none data-highlighted:bg-accent"
                                           value="boolean"
                                         >
-                                          <Select.ItemText>Boolean</Select.ItemText>
+                                          <Select.ItemText>{t('common.boolean')}</Select.ItemText>
                                         </Select.Item>
                                       </Select.Group>
                                     </Select.Viewport>
@@ -413,10 +408,12 @@ export function CreateAutomationScreen(props: CreateAutomationScreenProps) {
                         </div>
 
                         <div className="space-y-2 sm:col-span-2">
-                          <Label htmlFor={`output-description-${field.id}`}>Description</Label>
+                          <Label htmlFor={`output-description-${field.id}`}>
+                            {t('create.description')}
+                          </Label>
                           <Input
                             id={`output-description-${field.id}`}
-                            placeholder="Describe the result this automation produces"
+                            placeholder={t('create.outputDescription')}
                             {...register(`outputs.${index}.description`)}
                           />
                         </div>
@@ -426,7 +423,7 @@ export function CreateAutomationScreen(props: CreateAutomationScreenProps) {
                         type="button"
                         variant="ghost"
                         size="icon"
-                        aria-label="Remove output"
+                        aria-label={`${t('common.remove')} ${t('create.outputs')}`}
                         onClick={() => removeOutput(index)}
                       >
                         <Trash2Icon />
@@ -439,7 +436,7 @@ export function CreateAutomationScreen(props: CreateAutomationScreenProps) {
           </section>
 
           <div className="space-y-2">
-            <Label>Script source</Label>
+            <Label>{t('create.scriptSource')}</Label>
             <Controller
               control={control}
               name="scriptSource"
@@ -447,7 +444,7 @@ export function CreateAutomationScreen(props: CreateAutomationScreenProps) {
                 <Select.Root value={field.value} onValueChange={field.onChange}>
                   <Select.Trigger
                     className="flex h-9 w-full items-center justify-between rounded-md border bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-                    aria-label="Script source"
+                    aria-label={t('create.scriptSource')}
                   >
                     <Select.Value />
                     <Select.Icon asChild>
@@ -465,13 +462,13 @@ export function CreateAutomationScreen(props: CreateAutomationScreenProps) {
                             className="cursor-default rounded-sm px-2 py-1.5 text-sm outline-none data-highlighted:bg-accent"
                             value="inline"
                           >
-                            <Select.ItemText>Write script</Select.ItemText>
+                            <Select.ItemText>{t('create.scriptSourceInline')}</Select.ItemText>
                           </Select.Item>
                           <Select.Item
                             className="cursor-default rounded-sm px-2 py-1.5 text-sm outline-none data-highlighted:bg-accent"
                             value="file"
                           >
-                            <Select.ItemText>Choose Python file</Select.ItemText>
+                            <Select.ItemText>{t('create.scriptSourceFile')}</Select.ItemText>
                           </Select.Item>
                         </Select.Group>
                       </Select.Viewport>
@@ -484,12 +481,8 @@ export function CreateAutomationScreen(props: CreateAutomationScreenProps) {
 
           {scriptSource === 'inline' ? (
             <div className="space-y-2">
-              <Label>Script</Label>
-              <p className="text-sm text-muted-foreground">
-                Define <code>process(inputs)</code>. It receives a dictionary and must return a
-                dictionary with the configured outputs. Use <code>print</code> for logs;{' '}
-                <code>input()</code> is not supported.
-              </p>
+              <Label>{t('create.script')}</Label>
+              <p className="text-sm text-muted-foreground">{t('create.scriptHint')}</p>
               <Controller
                 control={control}
                 name="script"
@@ -515,13 +508,13 @@ export function CreateAutomationScreen(props: CreateAutomationScreenProps) {
               name="scriptPath"
               render={({ field }) => (
                 <div className="space-y-2">
-                  <Label htmlFor="script-path">Python file</Label>
+                  <Label htmlFor="script-path">{t('create.choosePythonFile')}</Label>
                   <div className="flex gap-2">
                     <Input
                       id="script-path"
                       readOnly
                       value={field.value ?? ''}
-                      placeholder="No Python file selected"
+                      placeholder={t('create.noPythonFile')}
                     />
                     <Button
                       type="button"
@@ -535,12 +528,10 @@ export function CreateAutomationScreen(props: CreateAutomationScreenProps) {
                       }}
                     >
                       <FileIcon data-icon="inline-start" />
-                      Choose file
+                      {t('common.file')}
                     </Button>
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    The current version of this file is used every time the automation runs.
-                  </p>
+                  <p className="text-sm text-muted-foreground">{t('create.scriptFileHint')}</p>
                   {errors.scriptPath ? (
                     <p className="text-sm text-destructive">{errors.scriptPath.message}</p>
                   ) : null}
@@ -557,16 +548,18 @@ export function CreateAutomationScreen(props: CreateAutomationScreenProps) {
 
           <div className="flex justify-end gap-3">
             <Button variant="outline" asChild>
-              <Link to={automation ? `/automations/${automation.id}` : '/'}>Cancel</Link>
+              <Link to={automation ? `/automations/${automation.id}` : '/'}>
+                {t('create.cancel')}
+              </Link>
             </Button>
             <Button type="submit" disabled={isSubmitting || saveAutomation.isPending}>
               {isSubmitting || saveAutomation.isPending
                 ? isEditing
-                  ? 'Saving...'
-                  : 'Creating...'
+                  ? t('create.saving')
+                  : t('create.creating')
                 : isEditing
-                  ? 'Save changes'
-                  : 'Create automation'}
+                  ? t('common.saveChanges')
+                  : t('create.createAutomation')}
             </Button>
           </div>
         </form>

@@ -5,6 +5,7 @@ import { listen } from '@tauri-apps/api/event';
 import { Menu } from '@tauri-apps/api/menu';
 import { PlusIcon, SettingsIcon } from 'lucide-react';
 import { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 import { SettingsModal } from '@/components/shared/SettingsModal';
@@ -29,7 +30,7 @@ import type { $AutomationPayload, $RunPayload } from '@/data/sqlite/types';
 
 import type { AppSidebarProps } from './types';
 
-function getRunIndicator(status: $RunPayload['status'] | undefined) {
+function getRunIndicator(status: $RunPayload['status'] | undefined, t: (key: string) => string) {
   switch (status) {
     case 'preparing':
       return {
@@ -37,18 +38,19 @@ function getRunIndicator(status: $RunPayload['status'] | undefined) {
         label: 'Installing dependencies',
       };
     case 'running':
-      return { className: 'animate-pulse fill-current text-primary', label: 'Running' };
+      return { className: 'animate-pulse fill-current text-primary', label: t('sidebar.running') };
     case 'succeeded':
       return { className: 'fill-current text-success', label: 'Succeeded' };
     case 'failed':
-      return { className: 'fill-current text-destructive', label: 'Failed' };
+      return { className: 'fill-current text-destructive', label: t('sidebar.failed') };
     default:
-      return { className: 'text-muted-foreground', label: 'No runs yet' };
+      return { className: 'text-muted-foreground', label: t('sidebar.noRuns') };
   }
 }
 
 export function AppSidebar(props: AppSidebarProps) {
   const { automations, isLoading, loadError } = props;
+  const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -114,7 +116,7 @@ export function AppSidebar(props: AppSidebarProps) {
         {
           action: () => void deleteAutomation(automation),
           id: `delete-${automation.id}`,
-          text: 'Delete automation',
+          text: t('sidebar.deleteAutomation'),
         },
       ],
     });
@@ -139,8 +141,8 @@ export function AppSidebar(props: AppSidebarProps) {
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Automations</SidebarGroupLabel>
-          <SidebarGroupAction aria-label="Create automation" asChild>
+          <SidebarGroupLabel>{t('sidebar.automations')}</SidebarGroupLabel>
+          <SidebarGroupAction aria-label={t('sidebar.createAutomation')} asChild>
             <Link to="/automations/new">
               <PlusIcon />
             </Link>
@@ -158,13 +160,14 @@ export function AppSidebar(props: AppSidebarProps) {
               </p>
             ) : automations.length === 0 ? (
               <p className="px-2 py-4 text-sm text-sidebar-foreground/60 group-data-[collapsible=icon]:hidden">
-                No automations yet.
+                {t('sidebar.noAutomations')}
               </p>
             ) : (
               <SidebarMenu>
                 {automations.map((automation) => {
                   const indicator = getRunIndicator(
-                    latestRunByAutomation.get(automation.id)?.status
+                    latestRunByAutomation.get(automation.id)?.status,
+                    t
                   );
 
                   return (
@@ -203,9 +206,9 @@ export function AppSidebar(props: AppSidebarProps) {
           <SidebarMenuItem>
             <SettingsModal
               trigger={
-                <SidebarMenuButton className="select-none" tooltip="Settings">
+                <SidebarMenuButton className="select-none" tooltip={t('sidebar.settings')}>
                   <SettingsIcon />
-                  <span>Settings</span>
+                  <span>{t('sidebar.settings')}</span>
                 </SidebarMenuButton>
               }
             />

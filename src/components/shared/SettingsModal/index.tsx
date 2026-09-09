@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { Checkbox, Dialog, Select, Tabs } from 'radix-ui';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { useTelemetry } from '@/components/shared/TelemetryProvider/use-telemetry';
 import { useTheme } from '@/components/shared/ThemeProvider/use-theme';
@@ -22,6 +23,8 @@ export function SettingsModal(props: SettingsModalProps) {
   const { trigger } = props;
   const [open, setOpen] = useState(false);
   const [selectedRunnerVersion, setSelectedRunnerVersion] = useState<string | null>(null);
+  const { i18n, t } = useTranslation();
+  const locale = i18n.resolvedLanguage ?? i18n.language;
   const { setTelemetry, telemetry } = useTelemetry();
   const { setTheme, theme } = useTheme();
   const queryClient = useQueryClient();
@@ -70,34 +73,34 @@ export function SettingsModal(props: SettingsModalProps) {
         <Dialog.Overlay className="fixed inset-0 z-50 bg-black/50" />
         <Dialog.Content className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-lg border bg-background shadow-lg">
           <div className="border-b px-6 py-5">
-            <Dialog.Title className="text-lg font-semibold">Settings</Dialog.Title>
+            <Dialog.Title className="text-lg font-semibold">{t('settings.settings')}</Dialog.Title>
             <Dialog.Description className="mt-1 text-sm text-muted-foreground">
-              Manage the runtimes available to automations.
+              {t('settings.settingsDescription')}
             </Dialog.Description>
           </div>
 
           <Tabs.Root defaultValue="general">
-            <Tabs.List className="flex border-b px-6" aria-label="Settings sections">
+            <Tabs.List className="flex border-b px-6" aria-label={t('settings.settingsSections')}>
               <Tabs.Trigger
                 className="border-b-2 border-transparent px-3 py-3 text-sm font-medium text-muted-foreground outline-none data-[state=active]:border-primary data-[state=active]:text-foreground"
                 value="general"
               >
-                General
+                {t('settings.general')}
               </Tabs.Trigger>
               <Tabs.Trigger
                 className="border-b-2 border-transparent px-3 py-3 text-sm font-medium text-muted-foreground outline-none data-[state=active]:border-primary data-[state=active]:text-foreground"
                 value="runners"
               >
-                Runners
+                {t('settings.runners')}
               </Tabs.Trigger>
             </Tabs.List>
 
             <Tabs.Content className="px-6 py-5" value="general">
               <div className="flex items-center justify-between gap-4">
                 <div>
-                  <h2 className="font-medium">Appearance</h2>
+                  <h2 className="font-medium">{t('settings.appearance')}</h2>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Choose how EVA Labs appears on this device.
+                    {t('settings.appearanceDescription')}
                   </p>
                 </div>
                 <Select.Root value={theme} onValueChange={setTheme}>
@@ -139,15 +142,60 @@ export function SettingsModal(props: SettingsModalProps) {
                 </Select.Root>
               </div>
 
+              <div className="mt-5 flex items-center justify-between gap-4 border-t pt-5">
+                <div>
+                  <h2 className="font-medium">{t('settings.language')}</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {t('settings.languageDescription')}
+                  </p>
+                </div>
+                <Select.Root
+                  value={locale}
+                  onValueChange={(value) =>
+                    value === 'en-US' || value === 'pt-BR'
+                      ? void i18n.changeLanguage(value)
+                      : undefined
+                  }
+                >
+                  <Select.Trigger className="flex h-9 w-44 shrink-0 items-center justify-between rounded-md border bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50">
+                    <Select.Value />
+                    <Select.Icon asChild>
+                      <ChevronDownIcon />
+                    </Select.Icon>
+                  </Select.Trigger>
+                  <Select.Portal>
+                    <Select.Content
+                      className="z-[60] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md"
+                      position="popper"
+                    >
+                      <Select.Viewport className="p-1">
+                        <Select.Item
+                          className="cursor-default rounded-sm px-2 py-1.5 text-sm outline-none data-highlighted:bg-accent"
+                          value="en-US"
+                        >
+                          <Select.ItemText>{t('language.english')}</Select.ItemText>
+                        </Select.Item>
+                        <Select.Item
+                          className="cursor-default rounded-sm px-2 py-1.5 text-sm outline-none data-highlighted:bg-accent"
+                          value="pt-BR"
+                        >
+                          <Select.ItemText>{t('language.portuguese')}</Select.ItemText>
+                        </Select.Item>
+                      </Select.Viewport>
+                    </Select.Content>
+                  </Select.Portal>
+                </Select.Root>
+              </div>
+
               <div className="mt-5 flex items-start justify-between gap-4 border-t pt-5">
                 <div>
-                  <h2 className="font-medium">Usage telemetry</h2>
+                  <h2 className="font-medium">{t('settings.telemetry')}</h2>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Share anonymous app launches and screen navigation to help improve EVA Labs.
+                    {t('settings.telemetryDescription')}
                   </p>
                 </div>
                 <Checkbox.Root
-                  aria-label="Share anonymous usage telemetry"
+                  aria-label={t('settings.telemetryLabel')}
                   checked={telemetry === 'enabled'}
                   className="mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-sm border border-input bg-background text-primary-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 data-[state=checked]:border-primary data-[state=checked]:bg-primary"
                   onCheckedChange={(checked) =>
@@ -164,21 +212,18 @@ export function SettingsModal(props: SettingsModalProps) {
             <Tabs.Content className="px-6 py-5" value="runners">
               <div className="flex items-center justify-between gap-4">
                 <div>
-                  <h2 className="font-medium">Python</h2>
-                  <p className="text-sm text-muted-foreground">
-                    Install a version with the bundled uv runner, then select the runner used by
-                    automations.
-                  </p>
+                  <h2 className="font-medium">{t('settings.python')}</h2>
+                  <p className="text-sm text-muted-foreground">{t('settings.pythonDescription')}</p>
                 </div>
                 <Button type="button" variant="outline" size="sm" onClick={() => refetchRunners()}>
                   <RefreshCwIcon data-icon="inline-start" />
-                  Refresh
+                  {t('common.refresh')}
                 </Button>
               </div>
 
               <div className="mt-4">
                 {areRunnersLoading ? (
-                  <p className="text-sm text-muted-foreground">Loading Python runners...</p>
+                  <p className="text-sm text-muted-foreground">{t('common.loading')}</p>
                 ) : runnersError ? (
                   <p className="text-sm text-destructive">
                     {runnersError instanceof Error ? runnersError.message : String(runnersError)}
@@ -186,7 +231,7 @@ export function SettingsModal(props: SettingsModalProps) {
                 ) : selectedRunner || isSystemSelected ? (
                   <div className="space-y-4">
                     <div className="space-y-2">
-                      <Label>Python version</Label>
+                      <Label>{t('settings.pythonVersion')}</Label>
                       <Select.Root
                         value={isSystemSelected ? 'system' : selectedRunner?.version}
                         onValueChange={setSelectedRunnerVersion}
@@ -208,7 +253,7 @@ export function SettingsModal(props: SettingsModalProps) {
                                   className="cursor-default rounded-sm px-2 py-1.5 text-sm outline-none data-highlighted:bg-accent"
                                   value="system"
                                 >
-                                  <Select.ItemText>System Python</Select.ItemText>
+                                  <Select.ItemText>{t('settings.systemPython')}</Select.ItemText>
                                 </Select.Item>
                                 {runners?.map((runner) => (
                                   <Select.Item
@@ -235,7 +280,7 @@ export function SettingsModal(props: SettingsModalProps) {
                           {isSystemSelected
                             ? interpreter
                               ? `Python ${interpreter.version}`
-                              : 'System Python was not found'
+                              : t('settings.systemPythonNotFound')
                             : selectedRunner?.installed
                               ? 'Installed with uv'
                               : 'Not installed'}
@@ -254,7 +299,7 @@ export function SettingsModal(props: SettingsModalProps) {
                       {isSystemSelected && isSystemActive ? (
                         <span className="inline-flex shrink-0 items-center gap-1 text-sm font-medium text-primary">
                           <CheckIcon className="size-4" />
-                          Active
+                          {t('common.active')}
                         </span>
                       ) : isSystemSelected && interpreter ? (
                         <Button
@@ -267,12 +312,12 @@ export function SettingsModal(props: SettingsModalProps) {
                           {selectRunner.isPending ? (
                             <LoaderCircleIcon className="animate-spin" />
                           ) : null}
-                          Use
+                          {t('common.use')}
                         </Button>
                       ) : selectedRunner?.active ? (
                         <span className="inline-flex shrink-0 items-center gap-1 text-sm font-medium text-primary">
                           <CheckIcon className="size-4" />
-                          Active
+                          {t('common.active')}
                         </span>
                       ) : selectedRunner?.installed ? (
                         <Button
@@ -285,7 +330,7 @@ export function SettingsModal(props: SettingsModalProps) {
                           {selectRunner.isPending ? (
                             <LoaderCircleIcon className="animate-spin" />
                           ) : null}
-                          Use
+                          {t('common.use')}
                         </Button>
                       ) : (
                         <Button
@@ -299,13 +344,13 @@ export function SettingsModal(props: SettingsModalProps) {
                           ) : (
                             <DownloadIcon />
                           )}
-                          Install
+                          {t('common.install')}
                         </Button>
                       )}
                     </div>
                   </div>
                 ) : (
-                  <p className="text-sm text-muted-foreground">No Python runners are available.</p>
+                  <p className="text-sm text-muted-foreground">{t('runner.noSystemPython')}</p>
                 )}
               </div>
 
@@ -319,7 +364,7 @@ export function SettingsModal(props: SettingsModalProps) {
 
           <div className="flex justify-end border-t px-6 py-4">
             <Dialog.Close asChild>
-              <Button>Done</Button>
+              <Button>{t('common.done')}</Button>
             </Dialog.Close>
           </div>
         </Dialog.Content>

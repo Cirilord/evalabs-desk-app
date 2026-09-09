@@ -1,4 +1,5 @@
 import { Dialog } from 'radix-ui';
+import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 
@@ -19,15 +20,16 @@ function getStatusLabel(status: RunDetailsModalProps['run']['status']) {
 }
 
 export function RunDetailsModal({ onOpenChange, open, run }: RunDetailsModalProps) {
+  const { t } = useTranslation();
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-50 bg-black/50" />
         <Dialog.Content className="fixed left-1/2 top-1/2 z-50 flex max-h-[calc(100svh-2rem)] w-[calc(100%-2rem)] max-w-3xl -translate-x-1/2 -translate-y-1/2 flex-col rounded-lg border bg-background shadow-lg">
           <div className="shrink-0 border-b px-6 py-5">
-            <Dialog.Title className="text-lg font-semibold">Run details</Dialog.Title>
+            <Dialog.Title className="text-lg font-semibold">{t('runs.details')}</Dialog.Title>
             <Dialog.Description className="mt-1 text-sm text-muted-foreground">
-              Execution information, inputs, and logs.
+              {t('runs.detailsDescription')}
             </Dialog.Description>
           </div>
 
@@ -46,27 +48,27 @@ export function RunDetailsModal({ onOpenChange, open, run }: RunDetailsModalProp
                 <dd>{getDuration(run.startedAt, run.finishedAt)}</dd>
               </div>
               <div className="flex flex-col gap-1">
-                <dt className="text-muted-foreground">Runner</dt>
+                <dt className="text-muted-foreground">{t('runs.runner')}</dt>
                 <dd>{run.runnerVersion || 'Unknown'}</dd>
               </div>
             </dl>
 
             <section className="mt-6">
-              <h2 className="text-sm font-medium">Inputs</h2>
+              <h2 className="text-sm font-medium">{t('runs.inputs')}</h2>
               <pre className="mt-2 overflow-x-auto rounded-md bg-muted px-3 py-2 text-xs text-foreground">
                 {JSON.stringify(run.inputs, null, 2)}
               </pre>
             </section>
 
             <section className="mt-6">
-              <h2 className="text-sm font-medium">Logs</h2>
+              <h2 className="text-sm font-medium">{t('runs.logs')}</h2>
               <pre className="mt-2 min-h-10 overflow-x-auto rounded-md bg-muted px-3 py-2 text-xs text-foreground">
-                {run.logs || 'No logs.'}
+                {run.logs || t('runs.noLogs')}
               </pre>
             </section>
 
             <section className="mt-6">
-              <h2 className="text-sm font-medium">Outputs</h2>
+              <h2 className="text-sm font-medium">{t('runs.outputs')}</h2>
               <pre className="mt-2 min-h-10 overflow-x-auto rounded-md bg-muted px-3 py-2 text-xs text-foreground">
                 {JSON.stringify(run.outputs, null, 2)}
               </pre>
@@ -74,7 +76,7 @@ export function RunDetailsModal({ onOpenChange, open, run }: RunDetailsModalProp
 
             {run.error ? (
               <section className="mt-6">
-                <h2 className="text-sm font-medium text-destructive">Error</h2>
+                <h2 className="text-sm font-medium text-destructive">{t('runs.error')}</h2>
                 <pre className="mt-2 overflow-x-auto rounded-md bg-destructive/10 px-3 py-2 text-xs text-destructive">
                   {run.error}
                 </pre>
@@ -85,7 +87,7 @@ export function RunDetailsModal({ onOpenChange, open, run }: RunDetailsModalProp
           <div className="flex shrink-0 justify-end border-t px-6 py-4">
             <Dialog.Close asChild>
               <Button type="button" variant="outline">
-                Close
+                {t('common.close')}
               </Button>
             </Dialog.Close>
           </div>
