@@ -746,6 +746,8 @@ fn execute_python_script(
     python_executable: String,
     automation_script: String,
     inputs: Value,
+    has_inputs: bool,
+    expects_outputs: bool,
 ) -> Result<PythonExecution, String> {
     let inputs = serde_json::to_string(&inputs).map_err(|error| error.to_string())?;
     let run_directory = TemporaryRunDirectory::create()?;
@@ -763,6 +765,8 @@ fn execute_python_script(
         .arg(&runner_path)
         .current_dir(&run_directory.path)
         .env("EVA_INPUTS", inputs)
+        .env("EVA_HAS_INPUTS", has_inputs.to_string())
+        .env("EVA_EXPECTS_OUTPUTS", expects_outputs.to_string())
         .env("EVA_AUTOMATION_PATH", automation_path)
         .env("EVA_OUTPUTS_PATH", &outputs_path)
         .output()
@@ -780,12 +784,12 @@ fn execute_python_script(
             Ok(outputs) if outputs.is_object() => outputs,
             Ok(_) => {
                 success = false;
-                error = "process must return a JSON object.".to_owned();
+                error = "main must return a JSON object.".to_owned();
                 Value::Object(serde_json::Map::new())
             }
             Err(outputs_error) => {
                 success = false;
-                error = format!("Failed to read process outputs: {outputs_error}");
+                error = format!("Failed to read automation outputs: {outputs_error}");
                 Value::Object(serde_json::Map::new())
             }
         }
@@ -1069,7 +1073,7 @@ fn validate_outputs(
 ) -> Result<(), String> {
     let outputs = outputs
         .as_object()
-        .ok_or_else(|| "process must return a JSON object.".to_owned())?;
+        .ok_or_else(|| "main must return a JSON object.".to_owned())?;
 
     for output_name in outputs.keys() {
         if !configured_outputs
@@ -1077,7 +1081,7 @@ fn validate_outputs(
             .any(|output| output.name == *output_name)
         {
             return Err(format!(
-                "process returned an unexpected output: \"{output_name}\"."
+                "main returned an unexpected output: \"{output_name}\"."
             ));
         }
     }
@@ -1085,7 +1089,7 @@ fn validate_outputs(
     for output in configured_outputs {
         let value = outputs
             .get(&output.name)
-            .ok_or_else(|| format!("process must return the \"{}\" output.", output.name))?;
+            .ok_or_else(|| format!("main must return the \"{}\" output.", output.name))?;
         let matches_type = match output.r#type.as_str() {
             "boolean" => value.is_boolean(),
             "number" => value.is_number(),
@@ -1175,6 +1179,7 @@ async fn start_automation_run(
     libraries: Vec<AutomationLibrary>,
     outputs: Vec<AutomationOutput>,
     inputs: Value,
+    has_inputs: bool,
 ) -> Result<StartedRun, String> {
     let python_executable = resolve_python_executable(&app).await?;
     let runner_version = detect_runner_version(&python_executable)?;
@@ -1203,6 +1208,7 @@ async fn start_automation_run(
 
     let environment_app = app.clone();
     let environment_automation_id = automation_id.clone();
+    let expects_outputs = !outputs.is_empty();
 
     tauri::async_runtime::spawn(async move {
         let execution = match tauri::async_runtime::spawn_blocking(move || {
@@ -1252,7 +1258,13 @@ async fn start_automation_run(
                             );
                         }
 
-                        execute_python_script(environment_python, automation_script, inputs)
+                        execute_python_script(
+                            environment_python,
+                            automation_script,
+                            inputs,
+                            has_inputs,
+                            expects_outputs,
+                        )
                     })
                     .await
                     {

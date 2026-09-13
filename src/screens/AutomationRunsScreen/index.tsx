@@ -169,6 +169,7 @@ export function AutomationRunsScreen() {
         libraries: automation.libraries,
         outputs: automation.outputs,
         inputs,
+        hasInputs: automation.inputs.length > 0,
       });
     },
     onSuccess: async () => {

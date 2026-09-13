@@ -50,6 +50,12 @@ function describeLibraries(libraries: CreateAutomationForm['libraries']) {
 function buildScriptPrompt(automation: CreateAutomationForm) {
   const name = automation.name.trim() || 'Untitled automation';
   const description = automation.description.trim() || 'No description provided.';
+  const inputContract = automation.inputs.length
+    ? '- Define exactly one public function: def main(inputs):\n- The inputs argument is a dictionary containing the configured inputs by name.'
+    : '- Define exactly one public function: def main().';
+  const outputContract = automation.outputs.length
+    ? '- Return a dictionary containing exactly the configured outputs by name.\n- Match every configured output type: text and file are strings, number is a JSON number, and boolean is true or false.'
+    : '- Returning a value is optional because this automation has no configured outputs.';
 
   return `You are an expert Python automation developer. Write the complete Python script for the following EVA Labs automation.
 
@@ -70,10 +76,8 @@ ${describeLibraries(automation.libraries)}
 
 Implementation contract:
 - Respond with only the complete Python code, without Markdown fences or explanations.
-- Define exactly one public function: def process(inputs):
-- The inputs argument is a dictionary containing the configured inputs by name.
-- Return a dictionary containing exactly the configured outputs by name.
-- Match every configured output type: text and file are strings, number is a JSON number, and boolean is true or false.
+${inputContract}
+${outputContract}
 - Use print() for execution logs when useful.
 - Never call input(), read from stdin, or require interactive user input.
 - Import and use only the configured third-party libraries when they are needed.

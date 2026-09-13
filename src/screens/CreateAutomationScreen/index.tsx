@@ -26,6 +26,16 @@ import type {
   SavedAutomationScript,
 } from './types';
 
+const DEFAULT_AUTOMATION_BODY = `  # Add your automation logic here.
+  pass`;
+const DEFAULT_AUTOMATION_BODY_WITH_OUTPUTS = `  # Add your automation logic here.
+  return {}`;
+const DEFAULT_AUTOMATION_SCRIPT = `def main():
+${DEFAULT_AUTOMATION_BODY}
+`;
+
+const MAIN_FUNCTION_PATTERN = /\bdef\s+main\s*\([^)]*\)/g;
+
 export function CreateAutomationScreen(props: CreateAutomationScreenProps) {
   const { automation } = props;
   const { t } = useTranslation();
@@ -67,11 +77,12 @@ export function CreateAutomationScreen(props: CreateAutomationScreenProps) {
     register,
     setError,
     setValue,
+    trigger,
   } = useForm<CreateAutomationForm>({
     defaultValues: {
       name: automation?.name ?? '',
       description: automation?.description ?? '',
-      script: automation?.script ?? '',
+      script: automation?.script ?? DEFAULT_AUTOMATION_SCRIPT,
       scriptMode:
         automation?.scriptSource === 'external' || automation?.scriptSource === 'file'
           ? 'file'
@@ -110,6 +121,38 @@ export function CreateAutomationScreen(props: CreateAutomationScreenProps) {
       (script) => setValue('script', script)
     );
   }, [automation, setValue]);
+
+  function synchronizeMainInputs(inputCount: number) {
+    const script = getValues('script');
+    const mainFunctions = [...script.matchAll(MAIN_FUNCTION_PATTERN)];
+    const [mainFunctionMatch] = mainFunctions;
+
+    if (mainFunctions.length !== 1 || !mainFunctionMatch) {
+      return;
+    }
+
+    const mainFunction = mainFunctionMatch[0];
+    const parameters = inputCount > 0 ? 'inputs: dict' : '';
+    const updatedMainFunction = mainFunction.replace(/\([^)]*\)/, `(${parameters})`);
+
+    if (mainFunction !== updatedMainFunction) {
+      setValue('script', script.replace(mainFunction, updatedMainFunction), {
+        shouldDirty: true,
+      });
+    }
+  }
+
+  function synchronizeDefaultOutputsReturn(hasOutputs: boolean) {
+    const script = getValues('script');
+    const currentBody = hasOutputs ? DEFAULT_AUTOMATION_BODY : DEFAULT_AUTOMATION_BODY_WITH_OUTPUTS;
+    const updatedBody = hasOutputs ? DEFAULT_AUTOMATION_BODY_WITH_OUTPUTS : DEFAULT_AUTOMATION_BODY;
+
+    if (!script.includes(currentBody)) {
+      return;
+    }
+
+    setValue('script', script.replace(currentBody, updatedBody), { shouldDirty: true });
+  }
 
   async function onSubmit(data: CreateAutomationForm) {
     try {
@@ -201,14 +244,16 @@ export function CreateAutomationScreen(props: CreateAutomationScreenProps) {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() =>
+                onClick={() => {
+                  synchronizeMainInputs(fields.length + 1);
                   append({
                     name: '',
                     type: 'text',
                     description: '',
                     required: false,
-                  })
-                }
+                  });
+                  void trigger('script');
+                }}
               >
                 <PlusIcon data-icon="inline-start" />
                 {t('create.addInput')}
@@ -316,7 +361,11 @@ export function CreateAutomationScreen(props: CreateAutomationScreenProps) {
                         variant="ghost"
                         size="icon"
                         aria-label={`${t('common.remove')} ${t('create.inputs')}`}
-                        onClick={() => remove(index)}
+                        onClick={() => {
+                          synchronizeMainInputs(fields.length - 1);
+                          remove(index);
+                          void trigger('script');
+                        }}
                       >
                         <Trash2Icon />
                       </Button>
@@ -355,13 +404,17 @@ export function CreateAutomationScreen(props: CreateAutomationScreenProps) {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() =>
+                onClick={() => {
+                  if (outputFields.length === 0) {
+                    synchronizeDefaultOutputsReturn(true);
+                  }
+
                   appendOutput({
                     name: '',
                     type: 'text',
                     description: '',
-                  })
-                }
+                  });
+                }}
               >
                 <PlusIcon data-icon="inline-start" />
                 {t('create.addOutput')}
@@ -469,7 +522,13 @@ export function CreateAutomationScreen(props: CreateAutomationScreenProps) {
                         variant="ghost"
                         size="icon"
                         aria-label={`${t('common.remove')} ${t('create.outputs')}`}
-                        onClick={() => removeOutput(index)}
+                        onClick={() => {
+                          if (outputFields.length === 1) {
+                            synchronizeDefaultOutputsReturn(false);
+                          }
+
+                          removeOutput(index);
+                        }}
                       >
                         <Trash2Icon />
                       </Button>
@@ -536,7 +595,10 @@ export function CreateAutomationScreen(props: CreateAutomationScreenProps) {
                     describedBy="script-error"
                     invalid={Boolean(errors.script)}
                     onBlur={field.onBlur}
-                    onChange={field.onChange}
+                    onChange={(value) => {
+                      field.onChange(value);
+                      void trigger('script');
+                    }}
                     value={field.value}
                   />
                 )}

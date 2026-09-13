@@ -59,7 +59,7 @@ export const translations = {
     'create.noPythonFile': 'No Python file selected',
     'create.scriptFileHint': 'Choose whether to clone the file or keep using its original version.',
     'create.scriptHint':
-      'Define process(inputs). It receives a dictionary and must return a dictionary with the configured outputs. Use print for logs; input() is not supported.',
+      'Define main() when there are no inputs, or main(inputs) otherwise. Return a dictionary only when outputs are configured. Use print for logs; input() is not supported.',
     'create.saving': 'Saving...',
     'create.creating': 'Creating...',
     'home.createAutomation': 'Create automation',
@@ -218,7 +218,7 @@ export const translations = {
     'create.scriptFileHint':
       'Escolha se deseja clonar o arquivo ou continuar usando sua versão original.',
     'create.scriptHint':
-      'Defina process(inputs). Ela recebe um dicionário e deve retornar um dicionário com as saídas configuradas. Use print para logs; input() não é suportado.',
+      'Defina main() quando não houver entradas, ou main(inputs) caso contrário. Retorne um dicionário apenas quando houver saídas configuradas. Use print para logs; input() não é suportado.',
     'create.saving': 'Salvando...',
     'create.creating': 'Criando...',
     'home.createAutomation': 'Criar automação',
