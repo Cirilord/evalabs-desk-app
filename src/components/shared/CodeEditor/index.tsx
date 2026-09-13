@@ -10,7 +10,7 @@ import type { CodeEditorProps } from './types';
 const extensions = [python()];
 
 export function CodeEditor(props: CodeEditorProps) {
-  const { describedBy, invalid, onBlur, onChange, value } = props;
+  const { describedBy, height = '20rem', invalid, onBlur, onChange, value } = props;
   const { resolvedTheme } = useTheme();
 
   return (
@@ -24,7 +24,7 @@ export function CodeEditor(props: CodeEditorProps) {
         invalid && 'border-destructive'
       )}
       extensions={extensions}
-      height="20rem"
+      height={height}
       indentWithTab={true}
       onBlur={onBlur}
       onChange={onChange}

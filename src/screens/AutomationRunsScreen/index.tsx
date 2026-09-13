@@ -21,6 +21,7 @@ import sqlite from '@/data/sqlite';
 import type { $AutomationPayload, $RunPayload } from '@/data/sqlite/types';
 import { getCodeEditorPreference } from '@/lib/code-editor';
 
+import { BuiltInScriptEditorModal } from './components/BuiltInScriptEditorModal';
 import { RunAutomationModal } from './components/RunAutomationModal';
 import { RunDetailsModal } from './components/RunDetailsModal';
 
@@ -56,6 +57,8 @@ export function AutomationRunsScreen() {
   const { automationId } = useParams();
   const [isRunModalOpen, setIsRunModalOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isBuiltInEditorOpen, setIsBuiltInEditorOpen] = useState(false);
+  const [builtInScript, setBuiltInScript] = useState('');
   const [selectedRun, setSelectedRun] = useState<$RunPayload | null>(null);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -153,6 +156,48 @@ export function AutomationRunsScreen() {
       await queryClient.invalidateQueries({ queryKey: queryKeys.automation(automationId ?? '') });
     },
   });
+  const openBuiltInScriptEditor = useMutation({
+    mutationFn: async (automation: $AutomationPayload) => {
+      if (automation.scriptSource !== 'managed') {
+        return automation.script;
+      }
+
+      return invoke<string>('read_managed_automation_script', { automationId: automation.id });
+    },
+    onSuccess: (script) => {
+      setBuiltInScript(script);
+      setIsBuiltInEditorOpen(true);
+    },
+  });
+  const saveBuiltInScript = useMutation({
+    mutationFn: async ({
+      automation,
+      script,
+    }: {
+      automation: $AutomationPayload;
+      script: string;
+    }) => {
+      const savedScript = await invoke<{
+        scriptPath: string;
+        scriptSource: $AutomationPayload['scriptSource'];
+      }>('save_automation_script', {
+        automationId: automation.id,
+        script,
+        scriptMode: 'inline',
+        scriptPath: null,
+        scriptFileMode: 'clone',
+      });
+
+      return sqlite.automation.update({
+        where: { id: automation.id },
+        data: { ...automation, ...savedScript, script },
+      });
+    },
+    onSuccess: async () => {
+      setIsBuiltInEditorOpen(false);
+      await queryClient.invalidateQueries({ queryKey: queryKeys.automation(automationId ?? '') });
+    },
+  });
   const runAutomation = useMutation({
     mutationFn: async ({
       automation,
@@ -188,6 +233,27 @@ export function AutomationRunsScreen() {
     });
   }
 
+  function editScript() {
+    if (!automation) {
+      return;
+    }
+
+    if (getCodeEditorPreference() === 'builtin') {
+      openBuiltInScriptEditor.mutate(automation);
+      return;
+    }
+
+    openScript.mutate(automation);
+  }
+
+  function saveScript() {
+    if (!automation) {
+      return;
+    }
+
+    saveBuiltInScript.mutate({ automation, script: builtInScript });
+  }
+
   if (isLoading) {
     return <main className="flex-1 p-6 sm:p-10">Loading automation...</main>;
   }
@@ -214,8 +280,8 @@ export function AutomationRunsScreen() {
             <Button
               type="button"
               variant="outline"
-              disabled={openScript.isPending}
-              onClick={() => openScript.mutate(automation)}
+              disabled={openScript.isPending || openBuiltInScriptEditor.isPending}
+              onClick={editScript}
             >
               <FilePenLineIcon data-icon="inline-start" />
               {t('runs.editScript')}
@@ -251,6 +317,13 @@ export function AutomationRunsScreen() {
             {openScript.error instanceof Error
               ? openScript.error.message
               : String(openScript.error)}
+          </p>
+        ) : null}
+        {openBuiltInScriptEditor.error ? (
+          <p className="text-sm text-destructive" role="alert">
+            {openBuiltInScriptEditor.error instanceof Error
+              ? openBuiltInScriptEditor.error.message
+              : String(openBuiltInScriptEditor.error)}
           </p>
         ) : null}
 
@@ -317,6 +390,25 @@ export function AutomationRunsScreen() {
         open={isRunModalOpen}
         onOpenChange={setIsRunModalOpen}
         onRun={handleRun}
+      />
+      <BuiltInScriptEditorModal
+        error={
+          saveBuiltInScript.error
+            ? saveBuiltInScript.error instanceof Error
+              ? saveBuiltInScript.error.message
+              : String(saveBuiltInScript.error)
+            : null
+        }
+        isSaving={saveBuiltInScript.isPending}
+        open={isBuiltInEditorOpen}
+        script={builtInScript}
+        onOpenChange={(open) => {
+          if (!saveBuiltInScript.isPending) {
+            setIsBuiltInEditorOpen(open);
+          }
+        }}
+        onSave={saveScript}
+        onScriptChange={setBuiltInScript}
       />
       {selectedRun ? (
         <RunDetailsModal

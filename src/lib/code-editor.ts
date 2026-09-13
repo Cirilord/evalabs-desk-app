@@ -25,20 +25,20 @@ export const codeEditorIds = [
   'notepad',
 ] as const;
 
-export type CodeEditorPreference = 'system' | (typeof codeEditorIds)[number];
+export type CodeEditorPreference = 'builtin' | 'system' | (typeof codeEditorIds)[number];
 
 const CODE_EDITOR_PREFERENCE_KEY = 'eva-labs-code-editor';
 
 export function getCodeEditorPreference(): CodeEditorPreference {
   const storedPreference = window.localStorage.getItem(CODE_EDITOR_PREFERENCE_KEY);
 
-  if (storedPreference === 'system') {
+  if (storedPreference === 'builtin' || storedPreference === 'system') {
     return storedPreference;
   }
 
   return codeEditorIds.some((editor) => editor === storedPreference)
     ? (storedPreference as Exclude<CodeEditorPreference, 'system'>)
-    : 'system';
+    : 'builtin';
 }
 
 export function storeCodeEditorPreference(preference: CodeEditorPreference) {

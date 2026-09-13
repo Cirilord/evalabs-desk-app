@@ -86,7 +86,9 @@ export function SettingsModal(props: SettingsModalProps) {
   }
 
   const selectedCodeEditor =
-    codeEditor === 'system' || codeEditors.some((editor) => editor.id === codeEditor)
+    codeEditor === 'builtin' ||
+    codeEditor === 'system' ||
+    codeEditors.some((editor) => editor.id === codeEditor)
       ? codeEditor
       : 'system';
 
@@ -229,7 +231,9 @@ export function SettingsModal(props: SettingsModalProps) {
                 <Select.Root
                   value={selectedCodeEditor}
                   onValueChange={(value) =>
-                    value === 'system' || codeEditors.some((editor) => editor.id === value)
+                    value === 'builtin' ||
+                    value === 'system' ||
+                    codeEditors.some((editor) => editor.id === value)
                       ? selectCodeEditor(value as CodeEditorPreference)
                       : undefined
                   }
@@ -246,6 +250,12 @@ export function SettingsModal(props: SettingsModalProps) {
                       position="popper"
                     >
                       <Select.Viewport className="max-h-64 overflow-y-auto p-1">
+                        <Select.Item
+                          className="cursor-default rounded-sm px-2 py-1.5 text-sm outline-none data-highlighted:bg-accent"
+                          value="builtin"
+                        >
+                          <Select.ItemText>{t('settings.builtInCodeEditor')}</Select.ItemText>
+                        </Select.Item>
                         <Select.Item
                           className="cursor-default rounded-sm px-2 py-1.5 text-sm outline-none data-highlighted:bg-accent"
                           value="system"
