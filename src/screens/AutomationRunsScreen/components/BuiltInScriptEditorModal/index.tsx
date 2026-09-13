@@ -31,11 +31,11 @@ export function BuiltInScriptEditorModal({
 
           <div className="min-h-0 flex-1 p-6">
             <CodeEditor height="min(60svh, 40rem)" onChange={onScriptChange} value={script} />
-            {error ? (
+            {error && (
               <p className="mt-3 text-sm text-destructive" role="alert">
                 {error}
               </p>
-            ) : null}
+            )}
           </div>
 
           <div className="flex shrink-0 justify-end gap-3 border-t px-6 py-4">

@@ -78,10 +78,10 @@ export function LibraryCombobox(props: LibraryComboboxProps) {
               onValueChange={setQuery}
             />
             <CommandList>
-              {filteredLibraries.length === 0 && !canAddQuery ? (
+              {filteredLibraries.length === 0 && !canAddQuery && (
                 <CommandEmpty>No libraries found.</CommandEmpty>
-              ) : null}
-              {filteredLibraries.length > 0 ? (
+              )}
+              {filteredLibraries.length > 0 && (
                 <CommandGroup heading="Suggested libraries">
                   {filteredLibraries.map((library) => (
                     <CommandItem key={library} value={library} onSelect={() => addLibrary(library)}>
@@ -89,21 +89,21 @@ export function LibraryCombobox(props: LibraryComboboxProps) {
                     </CommandItem>
                   ))}
                 </CommandGroup>
-              ) : null}
-              {canAddQuery ? (
+              )}
+              {canAddQuery && (
                 <CommandGroup heading="Custom package">
                   <CommandItem value={normalizedQuery} onSelect={() => addLibrary(normalizedQuery)}>
                     <PlusIcon data-icon="inline-start" />
                     Add {normalizedQuery}
                   </CommandItem>
                 </CommandGroup>
-              ) : null}
+              )}
             </CommandList>
           </Command>
         </PopoverContent>
       </Popover>
 
-      {libraries.length > 0 ? (
+      {libraries.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {libraries.map((library) => (
             <div
@@ -133,7 +133,7 @@ export function LibraryCombobox(props: LibraryComboboxProps) {
             </div>
           ))}
         </div>
-      ) : null}
+      )}
     </div>
   );
 }

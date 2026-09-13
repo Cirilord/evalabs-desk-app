@@ -272,9 +272,9 @@ export function AutomationRunsScreen() {
         <header className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">{automation.name}</h1>
-            {automation.description ? (
+            {automation.description && (
               <p className="mt-2 text-sm text-muted-foreground">{automation.description}</p>
-            ) : null}
+            )}
           </div>
           <div className="flex items-center gap-3">
             <Button
@@ -312,20 +312,20 @@ export function AutomationRunsScreen() {
           </div>
         </header>
 
-        {openScript.error ? (
+        {openScript.error && (
           <p className="text-sm text-destructive" role="alert">
             {openScript.error instanceof Error
               ? openScript.error.message
               : String(openScript.error)}
           </p>
-        ) : null}
-        {openBuiltInScriptEditor.error ? (
+        )}
+        {openBuiltInScriptEditor.error && (
           <p className="text-sm text-destructive" role="alert">
             {openBuiltInScriptEditor.error instanceof Error
               ? openBuiltInScriptEditor.error.message
               : String(openBuiltInScriptEditor.error)}
           </p>
-        ) : null}
+        )}
 
         <section className="flex flex-col gap-4" aria-labelledby="runs-heading">
           <div>
@@ -354,19 +354,19 @@ export function AutomationRunsScreen() {
                       <span className="text-sm text-muted-foreground">
                         {new Date(run.startedAt).toLocaleString()}
                       </span>
-                      {run.runnerVersion ? (
+                      {run.runnerVersion && (
                         <span className="text-sm text-muted-foreground">{run.runnerVersion}</span>
-                      ) : null}
+                      )}
                     </div>
                     <div className="flex items-center gap-3">
-                      {run.finishedAt ? (
+                      {run.finishedAt && (
                         <span className="text-sm text-muted-foreground">
                           Finished {new Date(run.finishedAt).toLocaleTimeString()}
                         </span>
-                      ) : null}
-                      {run.status === 'preparing' || run.status === 'running' ? (
+                      )}
+                      {(run.status === 'preparing' || run.status === 'running') && (
                         <LoaderCircleIcon className="animate-spin text-muted-foreground" />
-                      ) : null}
+                      )}
                       <Button
                         type="button"
                         size="sm"
@@ -410,7 +410,7 @@ export function AutomationRunsScreen() {
         onSave={saveScript}
         onScriptChange={setBuiltInScript}
       />
-      {selectedRun ? (
+      {selectedRun && (
         <RunDetailsModal
           open={Boolean(selectedRun)}
           run={selectedRun}
@@ -420,7 +420,7 @@ export function AutomationRunsScreen() {
             }
           }}
         />
-      ) : null}
+      )}
       <AlertDialog.Root open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialog.Portal>
           <AlertDialog.Overlay className="fixed inset-0 z-50 bg-black/50" />

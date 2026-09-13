@@ -106,9 +106,7 @@ export function GenerateScriptPromptDialog(props: GenerateScriptPromptDialogProp
           </div>
           <div className="flex shrink-0 items-center justify-between gap-3 border-t px-6 py-4">
             <p className="text-sm text-destructive" role="alert">
-              {copyState === 'error'
-                ? 'Could not copy the prompt. Select and copy it manually.'
-                : null}
+              {copyState === 'error' && 'Could not copy the prompt. Select and copy it manually.'}
             </p>
             <div className="flex gap-3">
               <Dialog.Close asChild>

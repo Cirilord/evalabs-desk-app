@@ -67,14 +67,14 @@ export function RunDetailsModal({ onOpenChange, open, run }: RunDetailsModalProp
               </pre>
             </section>
 
-            {run.error ? (
+            {run.error && (
               <section className="mt-6">
                 <h2 className="text-sm font-medium text-destructive">{t('runs.error')}</h2>
                 <pre className="mt-2 overflow-x-auto rounded-md bg-destructive/10 px-3 py-2 text-xs text-destructive">
                   {run.error}
                 </pre>
               </section>
-            ) : null}
+            )}
           </div>
 
           <div className="flex shrink-0 justify-end border-t px-6 py-4">

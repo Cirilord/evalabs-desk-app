@@ -172,11 +172,11 @@ export function CreateAutomationScreen(props: CreateAutomationScreenProps) {
               aria-invalid={Boolean(errors.name)}
               {...register('name')}
             />
-            {errors.name ? (
+            {errors.name && (
               <p id="name-error" className="text-sm text-destructive">
                 {errors.name.message}
               </p>
-            ) : null}
+            )}
           </div>
 
           <div className="space-y-2">
@@ -189,11 +189,11 @@ export function CreateAutomationScreen(props: CreateAutomationScreenProps) {
               aria-invalid={Boolean(errors.description)}
               {...register('description')}
             />
-            {errors.description ? (
+            {errors.description && (
               <p id="description-error" className="text-sm text-destructive">
                 {errors.description.message}
               </p>
-            ) : null}
+            )}
           </div>
 
           <section className="flex flex-col gap-2">
@@ -208,9 +208,9 @@ export function CreateAutomationScreen(props: CreateAutomationScreenProps) {
                 <LibraryCombobox libraries={field.value} onChange={field.onChange} />
               )}
             />
-            {errors.libraries ? (
+            {errors.libraries && (
               <p className="text-sm text-destructive">{errors.libraries.message}</p>
-            ) : null}
+            )}
           </section>
 
           <section className="flex flex-col gap-4">
@@ -256,11 +256,11 @@ export function CreateAutomationScreen(props: CreateAutomationScreenProps) {
                             aria-invalid={Boolean(errors.inputs?.[index]?.name)}
                             {...register(`inputs.${index}.name`)}
                           />
-                          {errors.inputs?.[index]?.name ? (
+                          {errors.inputs?.[index]?.name && (
                             <p className="text-sm text-destructive">
                               {errors.inputs[index].name.message}
                             </p>
-                          ) : null}
+                          )}
                         </div>
 
                         <div className="space-y-2">
@@ -437,11 +437,11 @@ export function CreateAutomationScreen(props: CreateAutomationScreenProps) {
                   />
                 )}
               />
-              {errors.script ? (
+              {errors.script && (
                 <p id="script-error" className="text-sm text-destructive">
                   {errors.script.message}
                 </p>
-              ) : null}
+              )}
             </div>
           ) : (
             <Controller
@@ -523,19 +523,19 @@ export function CreateAutomationScreen(props: CreateAutomationScreenProps) {
                       </div>
                     )}
                   />
-                  {errors.scriptPath ? (
+                  {errors.scriptPath && (
                     <p className="text-sm text-destructive">{errors.scriptPath.message}</p>
-                  ) : null}
+                  )}
                 </div>
               )}
             />
           )}
 
-          {errors.root ? (
+          {errors.root && (
             <p className="text-sm text-destructive" role="alert">
               {errors.root.message}
             </p>
-          ) : null}
+          )}
 
           <div className="flex justify-end gap-3">
             <Button variant="outline" asChild>

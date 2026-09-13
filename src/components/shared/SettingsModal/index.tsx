@@ -72,6 +72,7 @@ export function SettingsModal(props: SettingsModalProps) {
         runners?.[0]);
   const isSystemSelected = selectedRunnerVersion === 'system' || !selectedRunner;
   const isSystemActive = !activeRunner;
+  const runnerPath = isSystemSelected ? interpreter?.path : selectedRunner?.path;
   const runnerError = installRunner.error ?? selectRunner.error;
   const isDevelopment = import.meta.env.DEV;
 
@@ -119,14 +120,14 @@ export function SettingsModal(props: SettingsModalProps) {
               >
                 {t('settings.runners')}
               </Tabs.Trigger>
-              {isDevelopment ? (
+              {isDevelopment && (
                 <Tabs.Trigger
                   className="border-b-2 border-transparent px-3 py-3 text-sm font-medium text-muted-foreground outline-none data-[state=active]:border-primary data-[state=active]:text-foreground"
                   value="development"
                 >
                   {t('settings.development')}
                 </Tabs.Trigger>
-              ) : null}
+              )}
             </Tabs.List>
 
             <Tabs.Content className="px-6 py-5" value="general">
@@ -375,15 +376,11 @@ export function SettingsModal(props: SettingsModalProps) {
                               ? 'Installed with uv'
                               : 'Not installed'}
                         </p>
-                        {isSystemSelected && interpreter ? (
+                        {runnerPath && (
                           <p className="mt-1 break-all font-mono text-xs text-muted-foreground">
-                            {interpreter.path}
+                            {runnerPath}
                           </p>
-                        ) : selectedRunner?.path ? (
-                          <p className="mt-1 break-all font-mono text-xs text-muted-foreground">
-                            {selectedRunner.path}
-                          </p>
-                        ) : null}
+                        )}
                       </div>
 
                       {isSystemSelected && isSystemActive ? (
@@ -399,9 +396,7 @@ export function SettingsModal(props: SettingsModalProps) {
                           disabled={selectRunner.isPending}
                           onClick={() => selectRunner.mutate(null)}
                         >
-                          {selectRunner.isPending ? (
-                            <LoaderCircleIcon className="animate-spin" />
-                          ) : null}
+                          {selectRunner.isPending && <LoaderCircleIcon className="animate-spin" />}
                           {t('common.use')}
                         </Button>
                       ) : selectedRunner?.active ? (
@@ -417,9 +412,7 @@ export function SettingsModal(props: SettingsModalProps) {
                           disabled={selectRunner.isPending}
                           onClick={() => selectRunner.mutate(selectedRunner?.version ?? null)}
                         >
-                          {selectRunner.isPending ? (
-                            <LoaderCircleIcon className="animate-spin" />
-                          ) : null}
+                          {selectRunner.isPending && <LoaderCircleIcon className="animate-spin" />}
                           {t('common.use')}
                         </Button>
                       ) : (
@@ -444,14 +437,14 @@ export function SettingsModal(props: SettingsModalProps) {
                 )}
               </div>
 
-              {runnerError ? (
+              {runnerError && (
                 <p className="mt-3 text-sm text-destructive">
                   {runnerError instanceof Error ? runnerError.message : String(runnerError)}
                 </p>
-              ) : null}
+              )}
             </Tabs.Content>
 
-            {isDevelopment ? (
+            {isDevelopment && (
               <Tabs.Content className="px-6 py-5" value="development">
                 <div className="flex items-start justify-between gap-4">
                   <div>
@@ -465,7 +458,7 @@ export function SettingsModal(props: SettingsModalProps) {
                   </Button>
                 </div>
               </Tabs.Content>
-            ) : null}
+            )}
           </Tabs.Root>
 
           <div className="flex justify-end border-t px-6 py-4">

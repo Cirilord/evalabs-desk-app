@@ -60,6 +60,14 @@ export default tseslint.config(
           },
         },
       ],
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector:
+            'JSXElement > JSXExpressionContainer > ConditionalExpression[alternate.value=null]',
+          message: 'Use && instead of a ternary expression with null in JSX.',
+        },
+      ],
       'sort-imports': [
         'error',
         {

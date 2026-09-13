@@ -92,9 +92,9 @@ export function RunAutomationModal({
                                 </Checkbox.Root>
                                 <Label htmlFor={inputId}>{label}</Label>
                               </div>
-                              {input.description ? (
+                              {input.description && (
                                 <p className="text-sm text-muted-foreground">{input.description}</p>
-                              ) : null}
+                              )}
                             </div>
                           )}
                         />
@@ -130,14 +130,14 @@ export function RunAutomationModal({
                                   {t('common.file')}
                                 </Button>
                               </div>
-                              {errors[input.name]?.message ? (
+                              {errors[input.name]?.message && (
                                 <p className="text-sm text-destructive">
                                   {errors[input.name]?.message}
                                 </p>
-                              ) : null}
-                              {input.description ? (
+                              )}
+                              {input.description && (
                                 <p className="text-sm text-muted-foreground">{input.description}</p>
-                              ) : null}
+                              )}
                             </div>
                           )}
                         />
@@ -154,12 +154,12 @@ export function RunAutomationModal({
                             required: input.required ? 'This input is required.' : false,
                           })}
                         />
-                        {errors[input.name]?.message ? (
+                        {errors[input.name]?.message && (
                           <p className="text-sm text-destructive">{errors[input.name]?.message}</p>
-                        ) : null}
-                        {input.description ? (
+                        )}
+                        {input.description && (
                           <p className="text-sm text-muted-foreground">{input.description}</p>
-                        ) : null}
+                        )}
                       </div>
                     );
                   })}
@@ -174,9 +174,7 @@ export function RunAutomationModal({
                 </Button>
               </Dialog.Close>
               <Button type="submit" disabled={isBusy}>
-                {isBusy ? (
-                  <LoaderCircleIcon className="animate-spin" data-icon="inline-start" />
-                ) : null}
+                {isBusy && <LoaderCircleIcon className="animate-spin" data-icon="inline-start" />}
                 {isBusy ? t('runs.running') : t('runs.run')}
               </Button>
             </div>
