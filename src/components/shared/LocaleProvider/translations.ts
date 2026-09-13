@@ -20,6 +20,37 @@ export const translations = {
     'common.system': 'System',
     'common.text': 'Text',
     'common.use': 'Use',
+    'aiPrompt.latest': 'latest',
+    'aiPrompt.mainWithInputs':
+      '- Define exactly one public function: def main(inputs):\n- The inputs argument is a dictionary containing the configured inputs by name.',
+    'aiPrompt.mainWithoutInputs': '- Define exactly one public function: def main().',
+    'aiPrompt.noDescription': 'No description provided.',
+    'aiPrompt.noInputs': 'This automation does not receive inputs.',
+    'aiPrompt.noLibraries': 'No third-party libraries are configured.',
+    'aiPrompt.optional': 'optional',
+    'aiPrompt.required': 'required',
+    'aiPrompt.template': `You are an expert Python automation developer. Write the complete Python script for the following EVA Labs automation.
+
+Automation name: {{name}}
+Description: {{description}}
+
+Inputs:
+{{inputs}}
+
+Available third-party libraries:
+{{libraries}}
+
+Implementation contract:
+- Respond with only the complete Python code, without Markdown fences or explanations.
+{{inputContract}}
+- Use print() for execution logs when useful.
+- Never call input(), read from stdin, or require interactive user input.
+- Import and use only the configured third-party libraries when they are needed.
+- Handle expected errors clearly and keep the script ready to run as-is.
+
+Apply the contract above with these specific user instructions:
+[Write the specific behavior, rules, and edge cases you expect from the script here.]`,
+    'aiPrompt.untitledAutomation': 'Untitled automation',
     'create.addInput': 'Add input',
     'create.cancel': 'Cancel',
     'create.createAutomation': 'Create automation',
@@ -170,14 +201,44 @@ export const translations = {
     'common.system': 'Sistema',
     'common.text': 'Texto',
     'common.use': 'Usar',
+    'aiPrompt.latest': 'mais recente',
+    'aiPrompt.mainWithInputs':
+      '- Defina exatamente uma função pública: def main(inputs):\n- O argumento inputs é um dicionário com as entradas configuradas, identificadas pelo nome.',
+    'aiPrompt.mainWithoutInputs': '- Defina exatamente uma função pública: def main().',
+    'aiPrompt.noDescription': 'Nenhuma descrição informada.',
+    'aiPrompt.noInputs': 'Esta automação não recebe entradas.',
+    'aiPrompt.noLibraries': 'Nenhuma biblioteca de terceiros está configurada.',
+    'aiPrompt.optional': 'opcional',
+    'aiPrompt.required': 'obrigatório',
+    'aiPrompt.template': `Você é uma pessoa especialista em automações Python. Escreva o script Python completo para a seguinte automação do EVA Labs.
+
+Nome da automação: {{name}}
+Descrição: {{description}}
+
+Entradas:
+{{inputs}}
+
+Bibliotecas de terceiros disponíveis:
+{{libraries}}
+
+Contrato de implementação:
+- Responda somente com o código Python completo, sem blocos Markdown ou explicações.
+{{inputContract}}
+- Use print() para logs de execução quando for útil.
+- Nunca chame input(), leia stdin ou exija entrada interativa.
+- Importe e use somente bibliotecas de terceiros configuradas quando forem necessárias.
+- Trate erros esperados com clareza e mantenha o script pronto para executar.
+
+Aplique o contrato acima seguindo estas instruções específicas:
+[Escreva aqui o comportamento, as regras e os casos de borda esperados para o script.]`,
+    'aiPrompt.untitledAutomation': 'Automação sem nome',
     'create.addInput': 'Adicionar entrada',
-    'create.addOutput': 'Adicionar saída',
     'create.cancel': 'Cancelar',
     'create.createAutomation': 'Criar automação',
     'create.description': 'Descrição',
     'create.descriptionPlaceholder': 'Descreva o que esta automação faz',
     'create.editAutomation': 'Editar automação',
-    'create.editDescription': 'Atualize o script, as entradas e as saídas desta automação.',
+    'create.editDescription': 'Atualize o script e as entradas desta automação.',
     'create.inputDescription': 'Descreva o valor que esta automação precisa',
     'create.inputType': 'Tipo de entrada',
     'create.inputs': 'Entradas',
@@ -188,7 +249,6 @@ export const translations = {
     'create.name': 'Nome',
     'create.namePlaceholder': 'Consolidar planilhas mensais',
     'create.noInputs': 'Esta automação ainda não precisa de entradas.',
-    'create.noOutputs': 'Esta automação ainda não define saídas.',
     'create.required': 'Obrigatório',
     'create.script': 'Script',
     'create.scriptSource': 'Fonte do script',
@@ -207,7 +267,7 @@ export const translations = {
     'create.scriptFileHint':
       'Escolha se deseja clonar o arquivo ou continuar usando sua versão original.',
     'create.scriptHint':
-      'Defina main() quando não houver entradas, ou main(inputs) caso contrário. Retorne um dicionário apenas quando houver saídas configuradas. Use print para logs; input() não é suportado.',
+      'Defina main() quando não houver entradas, ou main(inputs) caso contrário. Use print para logs; input() não é suportado.',
     'create.saving': 'Salvando...',
     'create.creating': 'Criando...',
     'home.createAutomation': 'Criar automação',

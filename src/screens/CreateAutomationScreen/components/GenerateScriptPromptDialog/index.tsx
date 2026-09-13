@@ -1,6 +1,7 @@
 import { CheckIcon, CopyIcon, SparklesIcon } from 'lucide-react';
 import { Dialog } from 'radix-ui';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -8,70 +9,62 @@ import { Textarea } from '@/components/ui/textarea';
 import type { GenerateScriptPromptDialogProps } from './types';
 import type { CreateAutomationForm } from '../../types';
 
-function describeInputs(inputs: CreateAutomationForm['inputs']) {
+type Translate = ReturnType<typeof useTranslation>['t'];
+
+function describeInputs(inputs: CreateAutomationForm['inputs'], t: Translate) {
   if (inputs.length === 0) {
-    return '- This automation does not receive inputs.';
+    return `- ${t('aiPrompt.noInputs')}`;
   }
 
   return inputs
     .map((input) => {
-      const required = input.required ? 'required' : 'optional';
-      const description = input.description.trim() || 'No description provided.';
+      const required = input.required ? t('aiPrompt.required') : t('aiPrompt.optional');
+      const description = input.description.trim() || t('aiPrompt.noDescription');
+      const type = t(`common.${input.type}`);
 
-      return `- ${input.name || '<name>'} (${input.type}, ${required}): ${description}`;
+      return `- ${input.name || '<name>'} (${type}, ${required}): ${description}`;
     })
     .join('\n');
 }
 
-function describeLibraries(libraries: CreateAutomationForm['libraries']) {
+function describeLibraries(libraries: CreateAutomationForm['libraries'], t: Translate) {
   if (libraries.length === 0) {
-    return '- No third-party libraries are configured.';
+    return `- ${t('aiPrompt.noLibraries')}`;
   }
 
   return libraries
-    .map((library) => `- ${library.name || '<package>'} (${library.version || 'latest'})`)
+    .map(
+      (library) => `- ${library.name || '<package>'} (${library.version || t('aiPrompt.latest')})`
+    )
     .join('\n');
 }
 
-function buildScriptPrompt(automation: CreateAutomationForm) {
-  const name = automation.name.trim() || 'Untitled automation';
-  const description = automation.description.trim() || 'No description provided.';
+function buildScriptPrompt(automation: CreateAutomationForm, t: Translate) {
+  const name = automation.name.trim() || t('aiPrompt.untitledAutomation');
+  const description = automation.description.trim() || t('aiPrompt.noDescription');
   const inputContract = automation.inputs.length
-    ? '- Define exactly one public function: def main(inputs):\n- The inputs argument is a dictionary containing the configured inputs by name.'
-    : '- Define exactly one public function: def main().';
+    ? t('aiPrompt.mainWithInputs')
+    : t('aiPrompt.mainWithoutInputs');
 
-  return `You are an expert Python automation developer. Write the complete Python script for the following EVA Labs automation.
-
-Automation name: ${name}
-Description: ${description}
-
-User instructions:
-[Write the specific behavior, rules, and edge cases you expect from the script here.]
-
-Inputs:
-${describeInputs(automation.inputs)}
-
-Available third-party libraries:
-${describeLibraries(automation.libraries)}
-
-Implementation contract:
-- Respond with only the complete Python code, without Markdown fences or explanations.
-${inputContract}
-- Use print() for execution logs when useful.
-- Never call input(), read from stdin, or require interactive user input.
-- Import and use only the configured third-party libraries when they are needed.
-- Handle expected errors clearly and keep the script ready to run as-is.`;
+  return t('aiPrompt.template', {
+    description,
+    inputContract,
+    inputs: describeInputs(automation.inputs, t),
+    libraries: describeLibraries(automation.libraries, t),
+    name,
+  });
 }
 
 export function GenerateScriptPromptDialog(props: GenerateScriptPromptDialogProps) {
   const { getAutomation } = props;
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [prompt, setPrompt] = useState('');
   const [copyState, setCopyState] = useState<'idle' | 'copied' | 'error'>('idle');
 
   function handleOpenChange(nextOpen: boolean) {
     if (nextOpen) {
-      setPrompt(buildScriptPrompt(getAutomation()));
+      setPrompt(buildScriptPrompt(getAutomation(), t));
       setCopyState('idle');
     }
 
