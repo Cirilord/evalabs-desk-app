@@ -23,20 +23,6 @@ function describeInputs(inputs: CreateAutomationForm['inputs']) {
     .join('\n');
 }
 
-function describeOutputs(outputs: CreateAutomationForm['outputs']) {
-  if (outputs.length === 0) {
-    return '- This automation does not define outputs.';
-  }
-
-  return outputs
-    .map((output) => {
-      const description = output.description.trim() || 'No description provided.';
-
-      return `- ${output.name || '<name>'} (${output.type}): ${description}`;
-    })
-    .join('\n');
-}
-
 function describeLibraries(libraries: CreateAutomationForm['libraries']) {
   if (libraries.length === 0) {
     return '- No third-party libraries are configured.';
@@ -53,9 +39,6 @@ function buildScriptPrompt(automation: CreateAutomationForm) {
   const inputContract = automation.inputs.length
     ? '- Define exactly one public function: def main(inputs):\n- The inputs argument is a dictionary containing the configured inputs by name.'
     : '- Define exactly one public function: def main().';
-  const outputContract = automation.outputs.length
-    ? '- Return a dictionary containing exactly the configured outputs by name.\n- Match every configured output type: text and file are strings, number is a JSON number, and boolean is true or false.'
-    : '- Returning a value is optional because this automation has no configured outputs.';
 
   return `You are an expert Python automation developer. Write the complete Python script for the following EVA Labs automation.
 
@@ -68,16 +51,12 @@ User instructions:
 Inputs:
 ${describeInputs(automation.inputs)}
 
-Outputs:
-${describeOutputs(automation.outputs)}
-
 Available third-party libraries:
 ${describeLibraries(automation.libraries)}
 
 Implementation contract:
 - Respond with only the complete Python code, without Markdown fences or explanations.
 ${inputContract}
-${outputContract}
 - Use print() for execution logs when useful.
 - Never call input(), read from stdin, or require interactive user input.
 - Import and use only the configured third-party libraries when they are needed.

@@ -28,8 +28,6 @@ import type {
 
 const DEFAULT_AUTOMATION_BODY = `  # Add your automation logic here.
   pass`;
-const DEFAULT_AUTOMATION_BODY_WITH_OUTPUTS = `  # Add your automation logic here.
-  return {}`;
 const DEFAULT_AUTOMATION_SCRIPT = `def main():
 ${DEFAULT_AUTOMATION_BODY}
 `;
@@ -61,7 +59,7 @@ export function CreateAutomationScreen(props: CreateAutomationScreenProps) {
         scriptPath: savedScript.scriptPath,
         libraries: data.libraries,
         inputs: data.inputs,
-        outputs: data.outputs,
+        outputs: [],
       };
 
       return automation
@@ -94,21 +92,13 @@ export function CreateAutomationScreen(props: CreateAutomationScreenProps) {
       scriptPath: automation?.scriptPath ?? null,
       libraries: automation?.libraries ?? [],
       inputs: automation?.inputs ?? [],
-      outputs: automation?.outputs ?? [],
+      outputs: [],
     },
     resolver: zodResolver(createAutomationSchema),
   });
   const { append, fields, remove } = useFieldArray({
     control,
     name: 'inputs',
-  });
-  const {
-    append: appendOutput,
-    fields: outputFields,
-    remove: removeOutput,
-  } = useFieldArray({
-    control,
-    name: 'outputs',
   });
   const scriptMode = useWatch({ control, name: 'scriptMode' });
 
@@ -140,18 +130,6 @@ export function CreateAutomationScreen(props: CreateAutomationScreenProps) {
         shouldDirty: true,
       });
     }
-  }
-
-  function synchronizeDefaultOutputsReturn(hasOutputs: boolean) {
-    const script = getValues('script');
-    const currentBody = hasOutputs ? DEFAULT_AUTOMATION_BODY : DEFAULT_AUTOMATION_BODY_WITH_OUTPUTS;
-    const updatedBody = hasOutputs ? DEFAULT_AUTOMATION_BODY_WITH_OUTPUTS : DEFAULT_AUTOMATION_BODY;
-
-    if (!script.includes(currentBody)) {
-      return;
-    }
-
-    setValue('script', script.replace(currentBody, updatedBody), { shouldDirty: true });
   }
 
   async function onSubmit(data: CreateAutomationForm) {
@@ -389,150 +367,6 @@ export function CreateAutomationScreen(props: CreateAutomationScreenProps) {
                         </label>
                       )}
                     />
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
-
-          <section className="flex flex-col gap-4">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <h2 className="text-base font-medium">{t('create.outputs')}</h2>
-                <p className="text-sm text-muted-foreground">{t('create.outputsDescription')}</p>
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  if (outputFields.length === 0) {
-                    synchronizeDefaultOutputsReturn(true);
-                  }
-
-                  appendOutput({
-                    name: '',
-                    type: 'text',
-                    description: '',
-                  });
-                }}
-              >
-                <PlusIcon data-icon="inline-start" />
-                {t('create.addOutput')}
-              </Button>
-            </div>
-
-            {outputFields.length === 0 ? (
-              <p className="rounded-md border border-dashed px-4 py-6 text-sm text-muted-foreground">
-                {t('create.noOutputs')}
-              </p>
-            ) : (
-              <div className="flex flex-col gap-4">
-                {outputFields.map((field, index) => (
-                  <div key={field.id} className="rounded-lg border bg-background p-4">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="grid flex-1 gap-4 sm:grid-cols-2">
-                        <div className="space-y-2">
-                          <Label htmlFor={`output-name-${field.id}`}>{t('create.name')}</Label>
-                          <Input
-                            id={`output-name-${field.id}`}
-                            placeholder="report_file"
-                            aria-invalid={Boolean(errors.outputs?.[index]?.name)}
-                            {...register(`outputs.${index}.name`)}
-                          />
-                          {errors.outputs?.[index]?.name ? (
-                            <p className="text-sm text-destructive">
-                              {errors.outputs[index].name.message}
-                            </p>
-                          ) : null}
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label>{t('create.outputType')}</Label>
-                          <Controller
-                            control={control}
-                            name={`outputs.${index}.type`}
-                            render={({ field: typeField }) => (
-                              <Select.Root
-                                value={typeField.value}
-                                onValueChange={typeField.onChange}
-                              >
-                                <Select.Trigger
-                                  className="flex h-9 w-full items-center justify-between rounded-md border bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
-                                  aria-label={t('create.outputType')}
-                                >
-                                  <Select.Value />
-                                  <Select.Icon asChild>
-                                    <ChevronDownIcon />
-                                  </Select.Icon>
-                                </Select.Trigger>
-                                <Select.Portal>
-                                  <Select.Content
-                                    className="overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md"
-                                    position="popper"
-                                  >
-                                    <Select.Viewport className="p-1">
-                                      <Select.Group>
-                                        <Select.Item
-                                          className="cursor-default rounded-sm px-2 py-1.5 text-sm outline-none data-highlighted:bg-accent"
-                                          value="text"
-                                        >
-                                          <Select.ItemText>{t('common.text')}</Select.ItemText>
-                                        </Select.Item>
-                                        <Select.Item
-                                          className="cursor-default rounded-sm px-2 py-1.5 text-sm outline-none data-highlighted:bg-accent"
-                                          value="file"
-                                        >
-                                          <Select.ItemText>{t('common.file')}</Select.ItemText>
-                                        </Select.Item>
-                                        <Select.Item
-                                          className="cursor-default rounded-sm px-2 py-1.5 text-sm outline-none data-highlighted:bg-accent"
-                                          value="number"
-                                        >
-                                          <Select.ItemText>{t('common.number')}</Select.ItemText>
-                                        </Select.Item>
-                                        <Select.Item
-                                          className="cursor-default rounded-sm px-2 py-1.5 text-sm outline-none data-highlighted:bg-accent"
-                                          value="boolean"
-                                        >
-                                          <Select.ItemText>{t('common.boolean')}</Select.ItemText>
-                                        </Select.Item>
-                                      </Select.Group>
-                                    </Select.Viewport>
-                                  </Select.Content>
-                                </Select.Portal>
-                              </Select.Root>
-                            )}
-                          />
-                        </div>
-
-                        <div className="space-y-2 sm:col-span-2">
-                          <Label htmlFor={`output-description-${field.id}`}>
-                            {t('create.description')}
-                          </Label>
-                          <Input
-                            id={`output-description-${field.id}`}
-                            placeholder={t('create.outputDescription')}
-                            {...register(`outputs.${index}.description`)}
-                          />
-                        </div>
-                      </div>
-
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        aria-label={`${t('common.remove')} ${t('create.outputs')}`}
-                        onClick={() => {
-                          if (outputFields.length === 1) {
-                            synchronizeDefaultOutputsReturn(false);
-                          }
-
-                          removeOutput(index);
-                        }}
-                      >
-                        <Trash2Icon />
-                      </Button>
-                    </div>
                   </div>
                 ))}
               </div>

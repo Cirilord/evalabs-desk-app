@@ -116,7 +116,7 @@ export function AutomationRunsScreen() {
           scriptPath,
           libraries: automation.libraries,
           inputs: automation.inputs,
-          outputs: automation.outputs,
+          outputs: [],
         },
       });
     },
@@ -167,7 +167,7 @@ export function AutomationRunsScreen() {
         scriptSource: automation.scriptSource,
         scriptPath: automation.scriptPath,
         libraries: automation.libraries,
-        outputs: automation.outputs,
+        outputs: [],
         inputs,
         hasInputs: automation.inputs.length > 0,
       });

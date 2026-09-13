@@ -67,13 +67,6 @@ export function RunDetailsModal({ onOpenChange, open, run }: RunDetailsModalProp
               </pre>
             </section>
 
-            <section className="mt-6">
-              <h2 className="text-sm font-medium">{t('runs.outputs')}</h2>
-              <pre className="mt-2 min-h-10 overflow-x-auto rounded-md bg-muted px-3 py-2 text-xs text-foreground">
-                {JSON.stringify(run.outputs, null, 2)}
-              </pre>
-            </section>
-
             {run.error ? (
               <section className="mt-6">
                 <h2 className="text-sm font-medium text-destructive">{t('runs.error')}</h2>
